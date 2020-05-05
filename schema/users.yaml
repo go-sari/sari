@@ -1,0 +1,27 @@
+type: seq
+sequence:
+  - type: map
+    mapping:
+      login:
+        type: str
+        pattern: .+@.+
+        required: True
+        unique: True
+      default_grant_type:
+        type: str
+        enum: ['none', 'query', 'cru', 'crud']
+      permissions:
+        type: seq
+        sequence:
+          - type: map
+            mapping:
+              db:
+                type: str
+                required: True
+              grant_type:
+                type: str
+                enum: ['none', 'query', 'cru', 'crud']
+              not_valid_before:
+                type: timestamp
+              not_valid_after:
+                type: timestamp

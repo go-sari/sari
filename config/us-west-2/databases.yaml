@@ -1,0 +1,7 @@
+- id: blackwells
+  master_password: "ssm:blackwells.master_password"
+
+- id: foyles
+  master_password: "ssm:foyles.master_password"
+
+- id: whsmith

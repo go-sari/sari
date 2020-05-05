@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  sari:
+    image: sari:latest
+    container_name: sari
+    env_file: ./${CONFIG:-config}/env_file
+    volumes:
+        - ./${CONFIG:-config}:/app/config

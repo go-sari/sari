@@ -1,0 +1,14 @@
+- login: leroy.trent@acme.com
+  default_grant_type: query
+  permissions:
+    - db: "*"
+    - db: "blackwells"
+      grant_type: crud
+      not_valid_after: 2050-03-23 10:51:00 -04
+
+- login: bridget.huntington-whiteley@acme.com
+
+- login: valerie.tennant@acme.com
+  permissions:
+    - db: blackwells
+      grant_type: crud

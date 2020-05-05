@@ -1,0 +1,11 @@
+- id: blackwells
+  master_password: "ssm:blackwells.master_password"
+
+- id: foyles
+  enabled: false
+  master_password: "ssm:/ci/authorization/spring.datasource.password"
+
+- id: whsmith
+  master_password: "ssm:whsmith.master_password"
+
+- id: daunt-books

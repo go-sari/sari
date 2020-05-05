@@ -1,0 +1,38 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+coverage = "*"
+dictdiffer = "~=0.8"
+httmock = "~=1.3"
+mock-ssh-server = "*"
+moto = "==1.3.14"
+pre-commit = "~=2.2"
+pykwalify = "~=1.7"
+pytest = "~=5.4"
+pytest-cov = "~=2.8"
+
+[packages]
+boto3 = "~=1.12"
+configobj = "~=5.0"
+jmespath = "~=0.9"
+loguru = "~=0.4"
+mysql-connector-python = "~=8.0"
+paramiko = "~=2.7"
+prodict = "~=0.8"
+pulumi = ">=2.0.0,<3.0.0"
+pulumi-aws = ">=2.0.0,<3.0.0"
+pulumi-mysql = ">=2.0.0,<3.0.0"
+pulumi-okta = ">=2.0.0,<3.0.0"
+pysocks = "~=1.7"
+pytz = "*"
+pyyaml = "~=5.3"
+requests = "~=2.23"
+requests-futures = "~=1.0"
+tzlocal = "*"
+urllib3 = "~=1.25"
+
+[requires]
+python_version = "3.7"

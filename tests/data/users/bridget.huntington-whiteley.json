@@ -1,0 +1,22 @@
+[
+    {
+        "_links": {
+            "self": {
+                "href": "https://acme.okta.com/api/v1/users/00u4subrvCRYYe2dx765"
+            }
+        },
+        "activated": "2018-12-03T18:41:01.000Z",
+        "created": "2018-12-03T18:24:59.000Z",
+        "id": "00u4subrvCRYYe2dx765",
+        "profile": {
+            "displayName": "Bridget Huntington-Whiteley",
+            "email": "bridget.huntington-whiteley@acme.com",
+            "firstName": "Bridget",
+            "lastName": "Huntington-Whiteley",
+            "login": "bridget.huntington-whiteley@acme.com",
+            "sshPubKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGD13Dbe1QoYrFZqCue1TzGkzDSra9ZHzv8gZy9+vb0Y bridget.huntington-whiteley@acme.com"
+        },
+        "status": "ACTIVE",
+        "statusChanged": "2020-03-19T13:27:49.000Z"
+    }
+]

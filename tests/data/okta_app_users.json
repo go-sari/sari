@@ -1,0 +1,133 @@
+[
+    {
+        "_links": {
+            "app": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644"
+            },
+            "user": {
+                "href": "https://acme.okta.com/api/v1/users/00m6q2lgisjgmFq64772"
+            }
+        },
+        "created": "2020-03-14T15:30:51.000Z",
+        "credentials": {
+            "userName": "leroy.trent"
+        },
+        "externalId": "leroy.trent@acme.com",
+        "id": "00m6q2lgisjgmFq64772",
+        "lastSync": "2020-04-23T21:25:08.000Z",
+        "lastUpdated": "2020-04-23T21:25:08.000Z",
+        "profile": {
+            "email": "leroy.trent@acme.com",
+            "firstName": "Leroy",
+            "idpRolePairs": [],
+            "lastName": "Trent",
+            "mobilePhone": null,
+            "role": null,
+            "samlRoles": [
+                "sari_the-works",
+                "sari_waterstones",
+                "sari_blackwells"
+            ]
+        },
+        "scope": "USER",
+        "status": "PROVISIONED",
+        "statusChanged": "2020-03-14T15:30:52.000Z",
+        "syncState": "SYNCHRONIZED"
+    },
+    {
+        "_links": {
+            "app": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644"
+            },
+            "user": {
+                "href": "https://acme.okta.com/api/v1/users/00l2q4pgijxwLzJ7v722"
+            }
+        },
+        "created": "2020-04-20T14:05:10.000Z",
+        "credentials": {
+            "userName": "logan.purvis@acme.com"
+        },
+        "externalId": "logan.purvis@acme.com",
+        "id": "00l2q4pgijxwLzJ7v722",
+        "lastSync": "2020-04-20T14:05:11.000Z",
+        "lastUpdated": "2020-04-20T14:05:11.000Z",
+        "profile": {
+            "email": "logan.purvis@acme.com",
+            "firstName": "Logan",
+            "idpRolePairs": [],
+            "lastName": "Purvis",
+            "role": null,
+            "samlRoles": [
+                "sari_blackwells"
+            ]
+        },
+        "scope": "USER",
+        "status": "PROVISIONED",
+        "statusChanged": "2020-04-20T14:05:11.000Z",
+        "syncState": "SYNCHRONIZED"
+    },
+    {
+        "_links": {
+            "app": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644"
+            },
+            "user": {
+                "href": "https://acme.okta.com/api/v1/users/02y7wl0qina6bIPLu011"
+            }
+        },
+        "created": "2020-04-20T14:05:10.000Z",
+        "credentials": {
+            "userName": "denny.wright@acme.com"
+        },
+        "externalId": "denny.wright@acme.com",
+        "id": "02y7wl0qina6bIPLu011",
+        "lastSync": "2020-04-20T14:05:11.000Z",
+        "lastUpdated": "2020-04-20T14:05:11.000Z",
+        "profile": {
+            "email": "denny.wright@acme.com",
+            "firstName": "Denny",
+            "idpRolePairs": [],
+            "lastName": "Wright",
+            "role": null,
+            "samlRoles": [
+                "sari_blackwells"
+            ]
+        },
+        "scope": "USER",
+        "status": "PROVISIONED",
+        "statusChanged": "2020-04-20T14:05:11.000Z",
+        "syncState": "SYNCHRONIZED"
+    },
+    {
+        "_links": {
+            "app": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644"
+            },
+            "user": {
+                "href": "https://acme.okta.com/api/v1/users/31n466bvkeh4spZVD580"
+            }
+        },
+        "created": "2020-04-20T14:05:11.000Z",
+        "credentials": {
+            "userName": "thea.alcroft@acme.com"
+        },
+        "externalId": "thea.alcroft@acme.com",
+        "id": "31n466bvkeh4spZVD580",
+        "lastSync": "2020-04-20T14:05:14.000Z",
+        "lastUpdated": "2020-04-20T14:05:14.000Z",
+        "profile": {
+            "email": "thea.alcroft@acme.com",
+            "firstName": "Thea",
+            "idpRolePairs": [],
+            "lastName": "Alcroft",
+            "role": null,
+            "samlRoles": [
+                "sari_blackwells"
+            ]
+        },
+        "scope": "USER",
+        "status": "PROVISIONED",
+        "statusChanged": "2020-04-20T14:05:14.000Z",
+        "syncState": "SYNCHRONIZED"
+    }
+]

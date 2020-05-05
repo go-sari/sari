@@ -1,0 +1,183 @@
+[
+    {
+        "_links": {
+            "appLinks": [
+                {
+                    "href": "https://acme.okta.com/home/amazon_aws/7ns8u7ry8voMhQOsa644/272",
+                    "name": "login",
+                    "type": "text/html"
+                }
+            ],
+            "deactivate": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644/lifecycle/deactivate"
+            },
+            "groups": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644/groups"
+            },
+            "help": {
+                "href": "https://acme-admin.okta.com/app/amazon_aws/7ns8u7ry8voMhQOsa644/setup/help/SAML_2_0/external-doc",
+                "type": "text/html"
+            },
+            "logo": [
+                {
+                    "href": "https://ok7static.oktacdn.com/fs/bcg/4/gfs3ivsmba2N4T1Tv357",
+                    "name": "medium",
+                    "type": "image/png"
+                }
+            ],
+            "metadata": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644/sso/saml/metadata",
+                "type": "application/xml"
+            },
+            "users": {
+                "href": "https://acme.okta.com/api/v1/apps/7ns8u7ry8voMhQOsa644/users"
+            }
+        },
+        "accessibility": {
+            "errorRedirectUrl": null,
+            "loginRedirectUrl": null,
+            "selfService": false
+        },
+        "created": "2020-01-27T19:10:33.000Z",
+        "credentials": {
+            "signing": {
+                "kid": "HWpymjoWWdUqhcPMejoYeZ83fUtHPfavdyAAWC3lzb0"
+            },
+            "userNameTemplate": {
+                "template": "${fn:substringBefore(source.login, \"@\")}",
+                "type": "BUILT_IN"
+            }
+        },
+        "features": [
+            "PUSH_NEW_USERS",
+            "PUSH_PROFILE_UPDATES"
+        ],
+        "id": "7ns8u7ry8voMhQOsa644",
+        "label": "Amazon Web Services",
+        "lastUpdated": "2020-04-20T18:09:01.000Z",
+        "name": "amazon_aws",
+        "settings": {
+            "app": {
+                "accessKey": null,
+                "appFilter": "okta",
+                "awsEnvironmentType": "aws.amazon",
+                "groupFilter": "aws_(?{{accountid}}\\d+)_(?{{role}}[a-zA-Z0-9+=,.@\\-_]+)",
+                "identityProviderArn": "arn:aws:iam::535602187398:saml-provider/OktaSSOUser",
+                "joinAllRoles": true,
+                "loginURL": "https://acme.signin.aws.amazon.com/console",
+                "overrideAcsURL": null,
+                "roleValuePattern": "arn:aws:iam::${accountid}:saml-provider/OKTA,arn:aws:iam::${accountid}:role/${role}",
+                "secretKey": null,
+                "secretKeyEnc": null,
+                "sessionDuration": 3600,
+                "useGroupMapping": false
+            },
+            "notifications": {
+                "vpn": {
+                    "helpUrl": null,
+                    "message": null,
+                    "network": {
+                        "connection": "DISABLED"
+                    }
+                }
+            },
+            "signOn": {
+                "attributeStatements": [],
+                "audienceOverride": null,
+                "defaultRelayState": null,
+                "destinationOverride": null,
+                "recipientOverride": null,
+                "ssoAcsUrlOverride": null
+            }
+        },
+        "signOnMode": "SAML_2_0",
+        "status": "ACTIVE",
+        "visibility": {
+            "appLinks": {
+                "login": true
+            },
+            "autoSubmitToolbar": false,
+            "hide": {
+                "iOS": true,
+                "web": true
+            }
+        }
+    },
+    {
+        "_links": {
+            "appLinks": [
+                {
+                    "href": "https://acme.okta.com/home/zendesk/0nd88sz8rv9c6xoBh484/238",
+                    "name": "login",
+                    "type": "text/html"
+                }
+            ],
+            "deactivate": {
+                "href": "https://acme.okta.com/api/v1/apps/0nd88sz8rv9c6xoBh484/lifecycle/deactivate"
+            },
+            "groups": {
+                "href": "https://acme.okta.com/api/v1/apps/0nd88sz8rv9c6xoBh484/groups"
+            },
+            "logo": [
+                {
+                    "href": "https://ok7static.oktacdn.com/fs/bcg/4/rjv42brp8rDVVYbtu423",
+                    "name": "medium",
+                    "type": "image/png"
+                }
+            ],
+            "users": {
+                "href": "https://acme.okta.com/api/v1/apps/0nd88sz8rv9c6xoBh484/users"
+            }
+        },
+        "accessibility": {
+            "errorRedirectUrl": null,
+            "loginRedirectUrl": null,
+            "selfService": false
+        },
+        "created": "2020-03-09T17:02:12.000Z",
+        "credentials": {
+            "revealPassword": true,
+            "scheme": "EDIT_USERNAME_AND_PASSWORD",
+            "signing": {},
+            "userNameTemplate": {
+                "template": "user.login",
+                "type": "CUSTOM"
+            }
+        },
+        "features": [],
+        "id": "0nd88sz8rv9c6xoBh484",
+        "label": "Zendesk",
+        "lastUpdated": "2020-03-09T17:02:12.000Z",
+        "licensing": {
+            "seatCount": 0
+        },
+        "name": "zendesk",
+        "settings": {
+            "app": {
+                "authToken": null,
+                "companySubDomain": "acme"
+            },
+            "notifications": {
+                "vpn": {
+                    "helpUrl": null,
+                    "message": null,
+                    "network": {
+                        "connection": "DISABLED"
+                    }
+                }
+            }
+        },
+        "signOnMode": "BROWSER_PLUGIN",
+        "status": "ACTIVE",
+        "visibility": {
+            "appLinks": {
+                "login": true
+            },
+            "autoSubmitToolbar": false,
+            "hide": {
+                "iOS": false,
+                "web": false
+            }
+        }
+    }
+]

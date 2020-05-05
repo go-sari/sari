@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: verify
+        name: Run all tests
+        stages: [commit]
+        language: system
+        entry: pipenv run pytest -v
+        pass_filenames: false

@@ -1,0 +1,16 @@
+type: seq
+sequence:
+  - type: map
+    mapping:
+      id:
+        type: str
+        required: True
+        unique: True
+      db_name:
+        type: str
+      master_password:
+        type: str
+      tfe_workspace:
+        type: str
+      enabled:
+        type: bool

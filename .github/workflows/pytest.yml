@@ -1,0 +1,34 @@
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: cached venv
+      uses: actions/cache@v1
+      with:
+        path: .venv/
+        key: ${{ runner.os }}-venv
+
+    - name: Install Pipenv
+      run: pip install --disable-pip-version-check pipenv
+
+    - name: Install DEV Packages
+      run: PIPENV_VENV_IN_PROJECT=1 pipenv sync --dev
+
+    - name: Run all tests
+      run: pipenv run pytest -v

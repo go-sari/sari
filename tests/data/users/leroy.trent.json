@@ -1,0 +1,22 @@
+[
+    {
+        "_links": {
+            "self": {
+                "href": "https://acme.okta.com/api/v1/users/00m6q2lgisjgmFq64772"
+            }
+        },
+        "activated": "2019-10-15T15:20:32.000Z",
+        "created": "2019-10-15T15:20:17.000Z",
+        "id": "00m6q2lgisjgmFq64772",
+        "profile": {
+            "displayName": "Leroy Trent",
+            "email": "leroy.trent@acme.com",
+            "firstName": "Leroy",
+            "lastName": "Trent",
+            "login": "leroy.trent@acme.com",
+            "sshPubKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEfzjdkO1LKnS/it62jmw9tH4BznlnDCBrzaKguujJ15 leroy.trent@acme.com"
+        },
+        "status": "ACTIVE",
+        "statusChanged": "2019-10-15T15:29:36.000Z"
+    }
+]

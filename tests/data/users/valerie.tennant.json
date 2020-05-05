@@ -1,0 +1,21 @@
+[
+    {
+        "_links": {
+            "self": {
+                "href": "https://acme.okta.com/api/v1/users/00r3ii0qndBpfEjXL581"
+            }
+        },
+        "activated": "2020-02-24T21:41:40.000Z",
+        "created": "2020-02-24T21:41:40.000Z",
+        "id": "00r3ii0qndBpfEjXL581",
+        "profile": {
+            "displayName": "Valerie Tennant",
+            "email": "valerie.tennant@acme.com",
+            "firstName": "Valerie",
+            "lastName": "Tennant",
+            "login": "valerie.tennant@acme.com"
+        },
+        "status": "ACTIVE",
+        "statusChanged": "2020-03-03T16:07:15.000Z"
+    }
+]
