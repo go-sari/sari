@@ -34,7 +34,7 @@ RUN set -eux; \
     pulumi plugin install resource okta $pulumi_plugin_okta_version
 
 # Install required Python packages
-COPY Pipfile* .
+COPY Pipfile* ./
 RUN pipenv install --system
 
 # Copy application
