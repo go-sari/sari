@@ -19,4 +19,4 @@ __pycache__/
 wiki/
 
 Pulumi.*.yaml
-/.coverage
+.coverage
