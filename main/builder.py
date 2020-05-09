@@ -2,12 +2,8 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
-import pulumi
-# noinspection PyPackageRequirements
-import socks
 from prodict import Prodict
 
-from config.settings import settings
 from main import period
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
@@ -18,29 +14,21 @@ from main.mysql_gatherer import MySqlGatherer
 from main.okta_gatherer import OktaGatherer
 
 
-def build_model() -> Tuple[Prodict, List[Issue]]:
-    config = pulumi.Config()
-    proxy = config.get("socks5_proxy")
-
-    socks5_proxy = _endpoint_split(proxy, socks.DEFAULT_PORTS[socks.SOCKS5]) \
-        if proxy else None
-
-    model = Prodict.from_dict(settings)
-
-    model.update(Prodict(config={
-        "socks_proxy_url": f"socks5://{socks5_proxy[0]}:{socks5_proxy[1]}" if socks5_proxy else "",
-    }))
+def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
+    model = Prodict(aws=config.aws, okta=config.okta)
 
     # TODO: handle this using DI
     executor = ThreadPoolExecutor()
     aws = AwsClient(model.aws.region)
     aws_gatherer = AwsGatherer(aws)
     validator = period.TrackingValidator()
-    database_config_gatherer = DatabaseConfigGatherer(f"./config/{model.aws.region}/databases.yaml", aws)
-    user_config_gatherer = UserConfigGatherer(f"./config/users.yaml", validator)
+    config_dir = config.system.config_dir
+    database_config_gatherer = DatabaseConfigGatherer(config.master_password_defaults,
+                                                      f"{config_dir}/{model.aws.region}/databases.yaml", aws)
+    user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml", validator)
     okta_api_token = os.environ["OKTA_API_TOKEN"]
     okta_gatherer = OktaGatherer(okta_api_token, executor)
-    mysql_gatherer = MySqlGatherer(executor, socks5_proxy)
+    mysql_gatherer = MySqlGatherer(executor, config.system.proxy)
 
     all_issues: List[Issue] = []
     for gatherer in [
@@ -64,8 +52,3 @@ def build_model() -> Tuple[Prodict, List[Issue]]:
         dict_deep_merge(model, delta)
 
     return model, all_issues
-
-
-def _endpoint_split(endpoint, default_port):
-    parts = endpoint.split(':')
-    return parts[0], int(parts[1]) if parts[1:] else default_port

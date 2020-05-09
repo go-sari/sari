@@ -65,6 +65,10 @@ USERS_CONFIG = {
     },
 }
 
+MASTER_PASSWORD_DEFAULTS = {
+    r"([a-z][a-z0-9-]+)": r"ssm:\1.master_password"
+}
+
 OKTA_AWS_APP_LABEL = "Amazon Web Services"
 # Extracted with:
 # $ cat tests/data/okta_apps.json | jp "[?label=='$OKTA_AWS_APP_LABEL'].id | [0]"
@@ -117,7 +121,8 @@ class TestGatherers:
             Name="whsmith.master_password", Value="quirky_ganguly", Type="SecureString"
         )
         aws_client = AwsClient(AWS_REGION)
-        resp, issues = DatabaseConfigGatherer("tests/data/databases.yaml",
+        resp, issues = DatabaseConfigGatherer(MASTER_PASSWORD_DEFAULTS,
+                                              "tests/data/databases.yaml",
                                               aws_client).gather_rds_config(initial_model())
         assert len(issues) == 1
         assert issues[0].level == IssueLevel.ERROR

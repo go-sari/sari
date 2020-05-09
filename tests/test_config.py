@@ -4,28 +4,29 @@ from unittest.mock import Mock
 import pykwalify.core
 from prodict import Prodict
 
-import config.settings
 from main import period
 from main.aws_client import AwsClient
 from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer
+from main.config import load_config
 from main.dict import dict_deep_merge
 
 
 def test_yaml_config():
 
-    settings = Prodict.from_dict(config.settings.settings)
+    config = load_config()
 
-    databases_yaml = f"./config/{settings.aws.region}/databases.yaml"
+    config_dir = config.system.config_dir
+    databases_yaml = f"{config_dir}/{config.aws.region}/databases.yaml"
     yaml_validate(databases_yaml, "schema/databases.yaml")
 
-    users_yaml = "./config/users.yaml"
+    users_yaml = f"{config_dir}/users.yaml"
     yaml_validate(users_yaml, "schema/users.yaml")
 
     aws = Mock(spec=AwsClient)
     aws.ssm_get_encrypted_parameter.return_value = ("a_master_password", (datetime.now()))
 
-    model = Prodict(aws={"region": settings.aws.region})
-    resp, issues = DatabaseConfigGatherer(databases_yaml, aws).gather_rds_config(model)
+    model = Prodict(aws={"region": config.aws.region})
+    resp, issues = DatabaseConfigGatherer(config.master_password_defaults, databases_yaml, aws).gather_rds_config(model)
     assert not issues
 
     dict_deep_merge(model, resp)

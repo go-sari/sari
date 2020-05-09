@@ -7,7 +7,6 @@ import yaml
 from prodict import Prodict
 from time import time
 
-from config.settings import master_password_patterns
 from main.aws_client import AwsClient
 from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
@@ -78,10 +77,11 @@ class UserConfigGatherer:
 
 
 class DatabaseConfigGatherer:
-    def __init__(self, cfg_filename: str, aws: AwsClient):
+    def __init__(self, master_password_defaults: Dict[str, str], cfg_filename: str, aws: AwsClient):
         """
         :param cfg_filename: Path of Yaml file containing users definition.
         """
+        self.master_password_defaults = master_password_defaults
         self.cfg_filename = cfg_filename
         self.aws = aws
 
@@ -100,7 +100,7 @@ class DatabaseConfigGatherer:
                     "status": DbStatus.ENABLED.name,
                     "permissions": {},
                 }
-                master_password = cfg_db.get("master_password", _infer_master_password(db_id))
+                master_password = cfg_db.get("master_password", self._infer_master_password(db_id))
                 if master_password:
                     try:
                         db.update(self._expand_password(master_password))
@@ -142,13 +142,12 @@ class DatabaseConfigGatherer:
             'password_age': password_age,
         }
 
-
-def _infer_master_password(db_id: str):
-    for pattern, template in master_password_patterns.items():
-        match = re.match(pattern, db_id)
-        if match:
-            return match.expand(template)
-    return None
+    def _infer_master_password(self, db_id: str):
+        for pattern, template in self.master_password_defaults.items():
+            match = re.match(pattern, db_id)
+            if match:
+                return match.expand(template)
+        return None
 
 
 def _to_bool(val) -> bool:

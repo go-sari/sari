@@ -11,7 +11,6 @@ import pulumi_okta.app as okta_app
 from loguru import logger
 from prodict import Prodict
 
-from config.settings import grant_types, bastion_host
 from main.bastion_host import update_authorized_keys
 from main.constants import RDS_ROLE_PREFIX
 from main.dbstatus import DbStatus
@@ -25,7 +24,8 @@ TYPE_OKTA_APP_USER = "okta:app:User"
 
 class Synthesizer:
 
-    def __init__(self, model: Prodict):
+    def __init__(self, config: Prodict, model: Prodict):
+        self.config = config
         self.model = model
         self._resources = {}
 
@@ -103,7 +103,7 @@ class Synthesizer:
                 if not provider:
                     provider = mysql.Provider(db_id,
                                               endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
-                                              proxy=(self.model.config.socks_proxy_url or None),
+                                              proxy=self.config.system.proxy,
                                               username=db.master_username,
                                               # TODO: use password retrieved from SSM at execution time
                                               password=db.plain_master_password)
@@ -120,7 +120,7 @@ class Synthesizer:
                                           user=login,
                                           database=db_id,
                                           host=user.host,
-                                          privileges=grant_types[grant_type],
+                                          privileges=self.config.grant_types[grant_type],
                                           opts=pulumi.ResourceOptions(
                                               provider=provider,
                                               depends_on=[mysql_user]
@@ -150,12 +150,12 @@ class Synthesizer:
     def synthesize_bastion_host(self):
         ssh_pub_keys = [user.ssh_pubkey for user in self.model.okta.users.values()
                         if user.status == "ACTIVE"]
-        config = Prodict.from_dict(bastion_host)
+        config = Prodict.from_dict(self.config.bastion_host)
         errors = update_authorized_keys(config.hostname, config.admin_username,
                                         os.environ["BH_ADMIN_KEY_FILENAME"],
                                         os.environ["BH_ADMIN_KEY_PASSPHRASE"],
                                         config.proxy_username, ssh_pub_keys,
-                                        bastion_host.get("port"))
+                                        self.config.bastion_host.get("port"))
         if errors:
             logger.error("Errors while updating Bastion Host")
             for err in errors:

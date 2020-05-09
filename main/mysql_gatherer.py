@@ -1,6 +1,7 @@
 import socket
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Tuple, List
+from typing import Tuple, List, Optional
+from urllib.parse import urlparse
 
 import mysql.connector
 # noinspection PyPackageRequirements
@@ -15,12 +16,12 @@ from main.issue import Issue, IssueLevel
 
 class MySqlGatherer:
 
-    def __init__(self, executor: ThreadPoolExecutor, socks5_proxy: Tuple[str, int]):
+    def __init__(self, executor: ThreadPoolExecutor, proxy: Optional[str]):
         self.executor = executor
-        self.socks5_proxy = socks5_proxy
+        self.proxy = proxy
 
     def gather_rds_status(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        with _Socks5ProxyContext(self.socks5_proxy):
+        with _ProxyContext(self.proxy):
             return self._gather_rds_status(model)
 
     def _gather_rds_status(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
@@ -88,16 +89,18 @@ def _check_mysql_instance(db):
             connection.close()
 
 
-class _Socks5ProxyContext:
-    def __init__(self, socks5_proxy: Tuple[str, int]):
-        self.socks5_proxy = socks5_proxy
+class _ProxyContext:
+    def __init__(self, proxy: Optional[str]):
+        self.proxy = proxy
         self.old_socket = None
 
     def __enter__(self):
         self.old_socket = socket.socket
-        if self.socks5_proxy:
+        if self.proxy:
             # Monkeypatch
-            socks.set_default_proxy(socks.SOCKS5, self.socks5_proxy[0], self.socks5_proxy[1])
+            parts = urlparse(self.proxy)
+            proxy_type = socks.PROXY_TYPES[parts.scheme.upper()]
+            socks.set_default_proxy(proxy_type, parts.hostname, parts.port)
             socket.socket = socks.socksocket
 
     def __exit__(self, exc_type, exc_val, exc_tb):
