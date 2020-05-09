@@ -150,12 +150,14 @@ class Synthesizer:
     def synthesize_bastion_host(self):
         ssh_pub_keys = [user.ssh_pubkey for user in self.model.okta.users.values()
                         if user.status == "ACTIVE"]
-        config = Prodict.from_dict(self.config.bastion_host)
-        errors = update_authorized_keys(config.hostname, config.admin_username,
-                                        os.environ["BH_ADMIN_KEY_FILENAME"],
-                                        os.environ["BH_ADMIN_KEY_PASSPHRASE"],
-                                        config.proxy_username, ssh_pub_keys,
-                                        self.config.bastion_host.get("port"))
+        key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
+        errors = update_authorized_keys(hostname=self.config.bastion_host.hostname,
+                                        admin_username=self.config.bastion_host.admin_username,
+                                        key_filename=key_filename,
+                                        passphrase=os.environ["BH_ADMIN_KEY_PASSPHRASE"],
+                                        username=self.config.bastion_host.proxy_username,
+                                        ssh_pub_keys=ssh_pub_keys,
+                                        port=self.config.bastion_host.get("port"))
         if errors:
             logger.error("Errors while updating Bastion Host")
             for err in errors:
