@@ -27,6 +27,8 @@ RUN set -eux; \
         su pulumi -c "$HOME/.pulumi/bin/pulumi plugin install resource $p $version"; \
         strip --strip-unneeded $HOME/.pulumi/plugins/resource-${p}-v$version/pulumi-resource-${p}; \
     done; \
+    chown -R pulumi:pulumi $HOME; \
+    chmod -R go=u-w $HOME; \
     apt-get autoremove -yq binutils curl; \
     rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +38,7 @@ ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install required Python packages
 # Modified folder: $HOME/.local
-COPY Pipfile* ./
+COPY --chown=pulumi:pulumi Pipfile* ./
 RUN set -eux; \
     PATH=$HOME/.local/bin:$PATH; \
     pip3 install --disable-pip-version-check --no-cache-dir pipenv; \
@@ -45,11 +47,9 @@ RUN set -eux; \
     pip3 uninstall --disable-pip-version-check --yes pipenv
 
 # Copy application
-COPY entrypoint.sh *.py Pulumi.yaml ./
-COPY main/ $HOME/main/
-
-# Define volume with user configuration
 VOLUME $HOME/config
+COPY --chown=pulumi:pulumi entrypoint.sh *.py Pulumi.yaml ./
+COPY --chown=pulumi:pulumi main/ $HOME/main/
 
 ENTRYPOINT [ "./entrypoint.sh" ]
 CMD [ "preview" ]
