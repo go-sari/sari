@@ -47,7 +47,6 @@ RUN set -eux; \
     pip3 uninstall --disable-pip-version-check --yes pipenv
 
 # Copy application
-VOLUME $HOME/config
 COPY --chown=pulumi:pulumi entrypoint.sh *.py Pulumi.yaml ./
 COPY --chown=pulumi:pulumi main/ $HOME/main/
 
