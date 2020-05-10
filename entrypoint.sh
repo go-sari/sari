@@ -12,4 +12,4 @@ fi
 
 pulumi --non-interactive stack select this --create
 
-pulumi --non-interactive ${PULUMI_ACTION:-preview}
+pulumi --non-interactive --logtostderr -v=${PULUMI_LOG_LEVEL:-2} ${PULUMI_ACTION:-preview}
