@@ -1,8 +1,22 @@
-FROM python:3.7.7-slim-buster
+FROM python:3.7.7-slim-buster as stage0
+
+RUN set -uex; \
+    apt-get update -yqq; \
+    apt-get upgrade -yq; \
+    rm -rfv \
+        /var/lib/apt/lists/* \
+        /var/cache/debconf/* \
+        /var/log/dpkg.log \
+        /var/log/lastlog
+
+FROM scratch
 LABEL maintainer="Eliezio Oliveira <eliezio@pm.me>"
+COPY --from=stage0 / /
 
 ENV HOME=/app
-RUN adduser --disabled-password --home $HOME --gecos Pulumi pulumi
+RUN set -eux; \
+    adduser --disabled-password --home $HOME --gecos Pulumi pulumi; \
+    rm -vf /var/log/lastlog
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
 ARG pulumi_version=2.1.0
@@ -32,7 +46,10 @@ RUN set -eux; \
     chown -R pulumi:pulumi $HOME; \
     chmod -R go=u-w $HOME; \
     apt-get autoremove -yq binutils curl; \
-    rm -rf /var/lib/apt/lists/*
+    rm -rfv \
+        /var/lib/apt/lists/* \
+        /var/cache/debconf/* \
+        /var/log/dpkg.log
 
 USER pulumi
 WORKDIR $HOME
@@ -46,7 +63,10 @@ RUN set -eux; \
     pip3 install --disable-pip-version-check --no-cache-dir pipenv; \
     pipenv install --system; \
     rm -rf $HOME/.cache; \
-    pip3 uninstall --disable-pip-version-check --yes pipenv
+    pip3 uninstall --disable-pip-version-check --yes pipenv virtualenv virtualenv-clone; \
+    rm -rv $HOME/.local/lib/python3.7/site-packages/mysql-vendor; \
+    find $HOME/.local/lib/python3.7 -name \*.so \
+        -exec strip --strip-unneeded --preserve-dates {} \;
 
 # Copy application
 COPY --chown=pulumi:pulumi entrypoint.sh *.py Pulumi.yaml ./
