@@ -20,12 +20,14 @@ RUN set -eux; \
     apt-get install binutils curl -yq; \
     curl --proto '=https' --tlsv1.2 -fsSL https://get.pulumi.com/ | sh -s -- --version $pulumi_version; \
     for lang in dotnet go nodejs; do rm -v $HOME/.pulumi/bin/pulumi-language-$lang; done; \
-    strip --strip-unneeded $HOME/.pulumi/bin/pulumi; \
+    strip --strip-unneeded --preserve-dates \
+        $HOME/.pulumi/bin/pulumi \
+        $HOME/.pulumi/bin/pulumi-language-python; \
     chown -R pulumi $HOME/.pulumi; \
     for p in aws mysql okta; do \
         eval version=\$pulumi_plugin_${p}_version; \
         su pulumi -c "$HOME/.pulumi/bin/pulumi plugin install resource $p $version"; \
-        strip --strip-unneeded $HOME/.pulumi/plugins/resource-${p}-v$version/pulumi-resource-${p}; \
+        strip --strip-unneeded --preserve-dates $HOME/.pulumi/plugins/resource-${p}-v$version/pulumi-resource-${p}; \
     done; \
     chown -R pulumi:pulumi $HOME; \
     chmod -R go=u-w $HOME; \
