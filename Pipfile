@@ -13,6 +13,7 @@ pre-commit = "~=2.2"
 pykwalify = "~=1.7"
 pytest = "~=5.4"
 pytest-cov = "~=2.8"
+testcontainers = {extras = ["mysql"], version = "*"}
 
 [packages]
 boto3 = "~=1.12"
