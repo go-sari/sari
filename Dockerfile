@@ -19,10 +19,10 @@ RUN set -eux; \
     rm -vf /var/log/lastlog
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
-ARG pulumi_version=2.1.0
-ARG pulumi_plugin_aws_version=2.3.0
-ARG pulumi_plugin_mysql_version=2.1.0
-ARG pulumi_plugin_okta_version=2.1.0
+ARG pulumi_version=2.1.1
+ARG pulumi_plugin_aws_version=2.4.0
+ARG pulumi_plugin_mysql_version=2.1.1
+ARG pulumi_plugin_okta_version=2.1.1
 
 # Install Pulumi & Plugins in one go
 # Optmizations that saves 175MB:
@@ -62,8 +62,10 @@ RUN set -eux; \
     PATH=$HOME/.local/bin:$PATH; \
     pip3 install --disable-pip-version-check --no-cache-dir pipenv; \
     pipenv install --system; \
-    rm -rf $HOME/.cache; \
+    rm -rf $HOME/.cache $HOME/.local/virtualenvs; \
     pip3 uninstall --disable-pip-version-check --yes pipenv virtualenv virtualenv-clone; \
+    find $HOME/.local -type d -name __pycache__ \
+        -exec rm -rf {} \; -prune; \
     rm -rv $HOME/.local/lib/python3.7/site-packages/mysql-vendor; \
     find $HOME/.local/lib/python3.7 -name \*.so \
         -exec strip --strip-unneeded --preserve-dates {} \;
