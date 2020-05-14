@@ -21,7 +21,7 @@ WORKDIR $HOME
 ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
-ARG pulumi_version=2.1.1
+ARG pulumi_version=2.2.1
 ARG pulumi_plugin_aws_version=2.4.0
 ARG pulumi_plugin_mysql_version=2.1.1
 ARG pulumi_plugin_okta_version=2.1.1
