@@ -5,5 +5,6 @@ services:
     image: sari:latest
     container_name: sari
     env_file: ./${CONFIG:-config}/env_file
+    command: up --yes
     volumes:
         - ./${CONFIG:-config}:/app/config

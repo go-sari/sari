@@ -2,7 +2,7 @@
 
 set -eux
 
-PULUMI_ACTION=$1
+PULUMI_ACTION="$@"
 
 if [ -n "${PULUMI_BACKEND_URL:-}" ]; then
     pulumi --non-interactive login --cloud-url $PULUMI_BACKEND_URL
