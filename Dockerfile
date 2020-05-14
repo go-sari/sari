@@ -37,7 +37,7 @@ RUN set -eux; \
     # 0.0 Packages update
     apt-get update -yqq; \
     # 0.1 Install installers
-    apt-get install binutils curl -yq; \
+    apt-get install -yq --no-install-recommends binutils curl; \
     # 1 [Pulumi]
     # 1.1 Install Pulumi & Plugins
     curl --proto '=https' --tlsv1.2 -fsSL https://get.pulumi.com/ | sh -s -- --version $pulumi_version; \
