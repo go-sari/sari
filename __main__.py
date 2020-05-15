@@ -9,12 +9,12 @@ from main.issue import log_issues
 from main.synthesizer import Synthesizer
 
 
-def in_ci():
-    return os.environ.get("CODEBUILD_CI", None) == "true"
+def is_in_ci():
+    return os.environ.get("CI", None) == "true"
 
 
 logger.remove()
-if in_ci():
+if is_in_ci():
     logger.add(sys.stdout, colorize=False, format="{time:HH:mm:ss.SSS} {level} {message}")
 else:
     logger.add(sys.stdout, colorize=True, format="<green>{time:HH:mm:ss.SSS}</green> {level} <lvl>{message}</lvl>")
