@@ -1,5 +1,7 @@
 import json
 import os
+import tempfile
+from pathlib import Path
 from typing import List
 
 import pulumi
@@ -150,7 +152,12 @@ class Synthesizer:
     def synthesize_bastion_host(self):
         ssh_pub_keys = [user.ssh_pubkey for user in self.model.okta.users.values()
                         if user.status == "ACTIVE"]
-        key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
+        pkey = os.environ.get("BH_ADMIN_PRIVATE_KEY")
+        if pkey:
+            _, key_filename = tempfile.mkstemp(text=True)
+            Path(key_filename).write_text(pkey)
+        else:
+            key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
         errors = update_authorized_keys(hostname=self.config.bastion_host.hostname,
                                         admin_username=self.config.bastion_host.admin_username,
                                         key_filename=key_filename,
