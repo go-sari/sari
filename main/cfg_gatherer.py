@@ -34,7 +34,7 @@ class UserConfigGatherer:
         self._next_transition = None
 
     def gather_user_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        self._next_transition = model.system.next_transition
+        self._next_transition = model.job.next_transition
         issues = []
         with open(self.cfg_filename) as file:
             users_list: List[dict] = yaml.safe_load(file)
@@ -60,7 +60,7 @@ class UserConfigGatherer:
                 issues.append(Issue(level=IssueLevel.ERROR, type='USER', id=login, message=str(e)))
         updates = Prodict(okta={"users": users}, aws={"databases": databases})
         if self._next_transition:
-            updates.system = dict(next_transition=self._next_transition)
+            updates.job = dict(next_transition=self._next_transition)
         return updates, issues
 
     def _parse_permissions(self, perm_list: List[dict],

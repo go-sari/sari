@@ -86,7 +86,6 @@ def assert_dict_equals(actual: dict, expected: dict):
 
 def initial_model() -> Prodict:
     return Prodict.from_dict({
-        "system": {},
         "aws": {
             "region": AWS_REGION,
         },
@@ -97,6 +96,7 @@ def initial_model() -> Prodict:
                 "iam_user": "OktaSSOUser"
             },
         },
+        "job": {},
     })
 
 
@@ -193,7 +193,7 @@ class TestGatherers:
         user_config = UserConfigGatherer("tests/data/users.yaml", time_ref)
         resp, issues = user_config.gather_user_config(model)
         assert_dict_equals(resp, {
-            "system": {
+            "job": {
                 # 2020-05-26 10:22:00 +01
                 "next_transition": datetime(2020, 5, 26, 9, 22, 0, tzinfo=timezone.utc)
             },

@@ -26,7 +26,7 @@ def test_yaml_config():
     aws = Mock(spec=AwsClient)
     aws.ssm_get_encrypted_parameter.return_value = ("a_master_password", (datetime.now()))
 
-    model = Prodict(system={}, aws={"region": config.aws.region})
+    model = Prodict(aws={"region": config.aws.region}, job={})
     resp, issues = DatabaseConfigGatherer(config.master_password_defaults, databases_yaml, aws).gather_rds_config(model)
     assert not issues
 

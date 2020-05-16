@@ -14,7 +14,7 @@ from main.okta_gatherer import OktaGatherer
 
 
 def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
-    model = Prodict(aws=config.aws, okta=config.okta)
+    model = Prodict(aws=config.aws, okta=config.okta, job={})
 
     # TODO: handle this using DI
     executor = ThreadPoolExecutor()

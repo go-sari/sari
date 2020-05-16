@@ -43,7 +43,7 @@ class Synthesizer:
         self.synthesize_bastion_host()
 
     def synthesize_cloudwatch(self):
-        dt: datetime = self.model.system.next_transition
+        dt: datetime = self.model.job.next_transition
         if not dt:
             return
         aws = self.model.aws
