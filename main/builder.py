@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 from prodict import Prodict
 
-from main import period
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
 from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer
@@ -15,17 +14,16 @@ from main.okta_gatherer import OktaGatherer
 
 
 def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
-    model = Prodict(aws=config.aws, okta=config.okta)
+    model = Prodict(aws=config.aws, okta=config.okta, job={})
 
     # TODO: handle this using DI
     executor = ThreadPoolExecutor()
     aws = AwsClient(model.aws.region)
     aws_gatherer = AwsGatherer(aws)
-    validator = period.TrackingValidator()
     config_dir = config.system.config_dir
     database_config_gatherer = DatabaseConfigGatherer(config.master_password_defaults,
                                                       f"{config_dir}/{model.aws.region}/databases.yaml", aws)
-    user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml", validator)
+    user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml")
     okta_api_token = os.environ["OKTA_API_TOKEN"]
     okta_gatherer = OktaGatherer(okta_api_token, executor)
     mysql_gatherer = MySqlGatherer(executor, config.system.proxy)

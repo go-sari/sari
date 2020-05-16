@@ -32,7 +32,6 @@ pytz = "*"
 pyyaml = "~=5.3"
 requests = "~=2.23"
 requests-futures = "~=1.0"
-tzlocal = "*"
 urllib3 = "~=1.25"
 
 [requires]

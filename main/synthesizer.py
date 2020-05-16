@@ -1,11 +1,13 @@
 import json
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
 import pulumi
 import pulumi_aws
+import pulumi_aws.cloudwatch as cloudwatch
 import pulumi_aws.iam as iam
 import pulumi_mysql as mysql
 import pulumi_okta
@@ -30,8 +32,10 @@ class Synthesizer:
         self.config = config
         self.model = model
         self._resources = {}
+        self.aws_provider = pulumi_aws.Provider("default", region=model.aws.region)
 
     def synthesize_all(self):
+        self.synthesize_cloudwatch()
         self.synthesize_iam()
         self.synthesize_mysql()
         # TODO: maybe it's possible to detect the out-of-sync know-issue with Okta-AWS here and halt, asking for
@@ -39,9 +43,25 @@ class Synthesizer:
         self.synthesize_okta()
         self.synthesize_bastion_host()
 
+    def synthesize_cloudwatch(self):
+        dt: datetime = self.model.job.next_transition
+        if not dt:
+            return
+        aws = self.model.aws
+        rule_name = "build-sari-start"
+        cloudwatch.EventRule(rule_name,
+                             name=rule_name,
+                             description="Trigger SARI Build for Next Transition",
+                             schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
+                             opts=pulumi.ResourceOptions(provider=self.aws_provider))
+        cloudwatch.EventTarget(rule_name,
+                               arn=f"arn:aws:codebuild:{aws.region}:{aws.account}:project/build-sari",
+                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/build-sari-start",
+                               rule=rule_name,
+                               opts=pulumi.ResourceOptions(provider=self.aws_provider))
+
     def synthesize_iam(self):
         aws = self.model.aws
-        provider = pulumi_aws.Provider("default", region=aws.region)
         okta = self.model.okta
         assume_role_policy = _aws_make_policy([{
             "Sid": "1",
@@ -65,7 +85,7 @@ class Synthesizer:
                             description=f"Allow access to '{db_id}' using db-auth-token",
                             # TODO: tags=
                             assume_role_policy=assume_role_policy,
-                            opts=pulumi.ResourceOptions(provider=provider))
+                            opts=pulumi.ResourceOptions(provider=self.aws_provider))
             self._add_resource(TYPE_AWS_IAM_ROLE, db_id, role)
             if db.permissions:
                 db_policy = _aws_make_policy([{
@@ -91,7 +111,7 @@ class Synthesizer:
                                          name=role_name,
                                          role=role.id,
                                          policy=db_policy,
-                                         opts=pulumi.ResourceOptions(provider=provider))
+                                         opts=pulumi.ResourceOptions(provider=self.aws_provider))
             self._add_resource(TYPE_AWS_IAM_ROLE_POLICY, db_id, role_policy)
 
     def synthesize_mysql(self):

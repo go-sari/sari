@@ -1,8 +1,10 @@
 import mockssh
+import pytest
 
 from main.bastion_host import update_authorized_keys
 
 
+@pytest.mark.slow
 def test_update_authorized_keys():
     admin_user = ("admin", "tests/data/admin_id_rsa")
     users = dict([admin_user])
