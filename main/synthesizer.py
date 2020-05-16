@@ -178,13 +178,13 @@ class Synthesizer:
             Path(key_filename).write_text(pkey)
         else:
             key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
-        errors = update_authorized_keys(hostname=self.config.bastion_host.hostname,
-                                        admin_username=self.config.bastion_host.admin_username,
+        errors = update_authorized_keys(hostname=os.environ["BH_HOSTNAME"],
+                                        admin_username=os.environ["BH_ADMIN_USERNAME"],
                                         key_filename=key_filename,
                                         passphrase=os.environ["BH_ADMIN_KEY_PASSPHRASE"],
-                                        username=self.config.bastion_host.proxy_username,
+                                        username=os.environ["BH_PROXY_USERNAME"],
                                         ssh_pub_keys=ssh_pub_keys,
-                                        port=self.config.bastion_host.get("port"))
+                                        port=os.environ.get("BH_PORT"))
         if errors:
             logger.error("Errors while updating Bastion Host")
             for err in errors:
