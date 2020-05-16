@@ -55,8 +55,8 @@ class Synthesizer:
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
                              opts=pulumi.ResourceOptions(provider=self.aws_provider))
         cloudwatch.EventTarget(rule_name,
-                               arn=f"arn:aws:codebuild:{aws.region}:{aws.account_id}:project/build-sari",
-                               role_arn=f"arn:aws:codebuild:{aws.region}:{aws.account_id}:project/build-sari",
+                               arn=f"arn:aws:codebuild:{aws.region}:{aws.account}:project/build-sari",
+                               role_arn=f"arn:aws:codebuild:{aws.region}:{aws.account}:project/build-sari",
                                rule=rule_name,
                                opts=pulumi.ResourceOptions(provider=self.aws_provider))
 
