@@ -170,25 +170,31 @@ class Synthesizer:
             self._add_resource(TYPE_OKTA_APP_USER, login, okta_user)
 
     def synthesize_bastion_host(self):
-        ssh_pub_keys = [user.ssh_pubkey for user in self.model.okta.users.values()
-                        if user.status == "ACTIVE"]
+        ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
+                     if user.status == "ACTIVE"}
         pkey = os.environ.get("BH_ADMIN_PRIVATE_KEY")
         if pkey:
             _, key_filename = tempfile.mkstemp(text=True)
             Path(key_filename).write_text(pkey)
         else:
             key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
+        logger.info("Enabling SSH access to Bastion Host:")
         errors = update_authorized_keys(hostname=os.environ["BH_HOSTNAME"],
                                         admin_username=os.environ["BH_ADMIN_USERNAME"],
                                         key_filename=key_filename,
                                         passphrase=os.environ["BH_ADMIN_KEY_PASSPHRASE"],
                                         username=os.environ["BH_PROXY_USERNAME"],
-                                        ssh_pub_keys=ssh_pub_keys,
+                                        ssh_pub_keys=list(ssh_users.values()),
                                         port=os.environ.get("BH_PORT"))
         if errors:
             logger.error("Errors while updating Bastion Host")
             for err in errors:
                 logger.error(err.strip())
+        elif ssh_users:
+            for login in ssh_users:
+                logger.info(f"  {login}")
+        else:
+            logger.info(f"  NONE")
 
     def _add_resource(self, type_: str, name: str, res):
         self._resources[f"{type_}::{name}"] = res
