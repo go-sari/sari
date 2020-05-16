@@ -56,7 +56,7 @@ class Synthesizer:
                              opts=pulumi.ResourceOptions(provider=self.aws_provider))
         cloudwatch.EventTarget(rule_name,
                                arn=f"arn:aws:codebuild:{aws.region}:{aws.account}:project/build-sari",
-                               role_arn=f"arn:aws:codebuild:{aws.region}:{aws.account}:project/build-sari",
+                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/build-sari-start",
                                rule=rule_name,
                                opts=pulumi.ResourceOptions(provider=self.aws_provider))
 
