@@ -16,6 +16,7 @@ def update_authorized_keys(hostname: str,
         client.set_missing_host_key_policy(AutoAddPolicy)
         client.connect(hostname,
                        port=(port or SSH_PORT),
+                       timeout=5,
                        username=admin_username,
                        passphrase=passphrase,
                        key_filename=key_filename)
