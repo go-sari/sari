@@ -1,18 +1,19 @@
 import re
 from concurrent.futures.thread import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 from pprint import pformat
 from urllib.parse import unquote
 
 import boto3
 import pytest
+import pytz
 from dictdiffer import diff
 from httmock import HTTMock, response, urlmatch
 from moto import mock_rds2, mock_ssm, mock_sts
 from moto.iam.models import ACCOUNT_ID
 from prodict import Prodict
 
-from main import period
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
 from main.cfg_gatherer import DatabaseConfigGatherer, UserConfigGatherer
@@ -85,11 +86,7 @@ def assert_dict_equals(actual: dict, expected: dict):
 
 def initial_model() -> Prodict:
     return Prodict.from_dict({
-        # Defined via "pulumi config"
-        "config": {
-            "socks_proxy_url": "socks5://localhost:1080",
-        },
-        # From ENV/settings.py
+        "system": {},
         "aws": {
             "region": AWS_REGION,
         },
@@ -191,9 +188,15 @@ class TestGatherers:
                 "master_password": "ssm:whsmith.master_password",
             },
         })
-        user_config = UserConfigGatherer("tests/data/users.yaml", period.TrackingValidator())
+        tz = pytz.timezone("Europe/Dublin")
+        time_ref = datetime(2020, 5, 15, 22, 24, 51, tzinfo=tz)
+        user_config = UserConfigGatherer("tests/data/users.yaml", time_ref)
         resp, issues = user_config.gather_user_config(model)
         assert_dict_equals(resp, {
+            "system": {
+                # 2020-05-26 10:22:00 +01
+                "next_transition": datetime(2020, 5, 26, 9, 22, 0, tzinfo=timezone.utc)
+            },
             "okta": {
                 "users": USERS_CONFIG,
             },

@@ -8,6 +8,7 @@ from main.mysql_gatherer import MySqlGatherer
 from tests.test_gatherers import assert_dict_equals
 
 
+@pytest.mark.slow
 @pytest.mark.testcontainer
 def test_mysql_gather_rds_status():
     db_name = "db_blackwells"

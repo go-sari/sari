@@ -1,11 +1,13 @@
 import json
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
 import pulumi
 import pulumi_aws
+import pulumi_aws.cloudwatch as cloudwatch
 import pulumi_aws.iam as iam
 import pulumi_mysql as mysql
 import pulumi_okta
@@ -32,12 +34,31 @@ class Synthesizer:
         self._resources = {}
 
     def synthesize_all(self):
+        self.synthesize_cloudwatch()
         self.synthesize_iam()
         self.synthesize_mysql()
         # TODO: maybe it's possible to detect the out-of-sync know-issue with Okta-AWS here and halt, asking for
         #   manual intervention from the Okta Administrator
         self.synthesize_okta()
         self.synthesize_bastion_host()
+
+    def synthesize_cloudwatch(self):
+        dt: datetime = self.model.system.next_transition
+        if not dt:
+            return
+        aws = self.model.aws
+        provider = pulumi_aws.Provider("default", region=aws.region)
+        rule_name = "build-sari-start"
+        cloudwatch.EventRule(rule_name,
+                             name=rule_name,
+                             description="Trigger SARI Build for Next Transition",
+                             schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
+                             opts=pulumi.ResourceOptions(provider=provider))
+        cloudwatch.EventTarget(rule_name,
+                               arn=f"arn:aws:codebuild:{aws.region}:{aws.account_id}:project/build-sari",
+                               role_arn=f"arn:aws:codebuild:{aws.region}:{aws.account_id}:project/build-sari",
+                               rule=rule_name,
+                               opts=pulumi.ResourceOptions(provider=provider))
 
     def synthesize_iam(self):
         aws = self.model.aws

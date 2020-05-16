@@ -1,8 +1,9 @@
 import re
 from datetime import datetime, timedelta
 from distutils.util import strtobool
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
+import pytz
 import yaml
 from prodict import Prodict
 from time import time
@@ -11,7 +12,6 @@ from main.aws_client import AwsClient
 from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
 from main.misc import wc_expand
-from main.period import Validator
 
 # Limited by MySQL. See https://dev.mysql.com/doc/refman/8.0/en/user-names.html
 MAX_DB_USERNAME_LENGTH = 32
@@ -19,16 +19,22 @@ DEFAULT_GRANT_TYPE = 'query'
 
 
 class UserConfigGatherer:
-    def __init__(self, cfg_filename: str, validator: Validator):
+    def __init__(self, cfg_filename: str, time_ref: datetime = None):
         """
         :param cfg_filename: Path of Yaml file containing users definition.
 
-        :param validator: Helper class responsible to validate datetime periods.
+        :param time_ref: (Aware) datetime to evaluate validity times.
         """
         self.cfg_filename = cfg_filename
-        self.validator = validator
+        if not time_ref:
+            time_ref = datetime.now(pytz.utc)
+        else:
+            _check_dt(time_ref, "time_ref")
+        self.time_ref = time_ref
+        self._next_transition = None
 
     def gather_user_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+        self._next_transition = model.system.next_transition
         issues = []
         with open(self.cfg_filename) as file:
             users_list: List[dict] = yaml.safe_load(file)
@@ -39,41 +45,55 @@ class UserConfigGatherer:
         for user in users_list:
             login = user["login"]
             default_grant_type = user.get("default_grant_type", DEFAULT_GRANT_TYPE)
-            permissions, perm_issues = self._parse_permissions(
-                login,
-                user.get("permissions", []),
-                default_grant_type,
-                enabled_databases)
-            issues.extend(perm_issues)
-            users[login] = {
-                "db_username": login[:MAX_DB_USERNAME_LENGTH],
-                "permissions": permissions
-            }
-            for db_id, grant_type in permissions.items():
-                databases.setdefault(db_id, {"permissions": {}})["permissions"][login] = grant_type
-        return Prodict(okta={"users": users}, aws={"databases": databases}), issues
+            try:
+                permissions = self._parse_permissions(
+                    user.get("permissions", []),
+                    default_grant_type,
+                    enabled_databases)
+                users[login] = {
+                    "db_username": login[:MAX_DB_USERNAME_LENGTH],
+                    "permissions": permissions
+                }
+                for db_id, grant_type in permissions.items():
+                    databases.setdefault(db_id, {"permissions": {}})["permissions"][login] = grant_type
+            except ValueError as e:
+                issues.append(Issue(level=IssueLevel.ERROR, type='USER', id=login, message=str(e)))
+        updates = Prodict(okta={"users": users}, aws={"databases": databases})
+        if self._next_transition:
+            updates.system = dict(next_transition=self._next_transition)
+        return updates, issues
 
-    def _parse_permissions(self, login: str,
-                           perm_list: List[dict],
+    def _parse_permissions(self, perm_list: List[dict],
                            default_grant_type: str,
-                           db_ids: List[str]) -> Tuple[Dict[str, str], List[Issue]]:
-        issues = []
+                           db_ids: List[str]) -> Dict[str, str]:
         permissions: Dict[str, str] = {}
         for perm in perm_list:
             db_ref = perm['db']
             db_id_list = wc_expand(db_ref, db_ids)
             if not db_id_list:
-                issues.append(Issue(level=IssueLevel.ERROR, type='USER', id=login,
-                                    message=f"Not existing and enabled DB instance reference '{db_ref}'"))
-                continue
-            not_valid_before = perm.get('not_valid_before', None)
-            not_valid_after = perm.get('not_valid_after', None)
-            grant_type = perm.get('grant_type', default_grant_type) \
-                if self.validator.is_valid(not_valid_before, not_valid_after) else default_grant_type
+                raise ValueError(f"Not existing and enabled DB instance reference '{db_ref}'")
+            not_valid_before = _check_dt(perm, "not_valid_before")
+            not_valid_after = _check_dt(perm, "not_valid_after")
+            grant_type = perm.get('grant_type', default_grant_type)
+            if not_valid_before or not_valid_after:
+                if not_valid_before and not_valid_after and (not_valid_after < not_valid_before):
+                    raise ValueError(f"'{not_valid_before}' should precede '{not_valid_after}'")
+                if not_valid_before and self.time_ref < not_valid_before:
+                    grant_type = default_grant_type
+                    self._set_next_transition(not_valid_before)
+                elif not_valid_after:
+                    if self.time_ref > not_valid_after:
+                        grant_type = default_grant_type
+                    else:
+                        self._set_next_transition(not_valid_after)
             if grant_type != "none":
                 for db_id in db_id_list:
                     permissions[db_id] = grant_type
-        return permissions, issues
+        return permissions
+
+    def _set_next_transition(self, dt: datetime):
+        if not self._next_transition or (dt < self._next_transition):
+            self._next_transition = dt
 
 
 class DatabaseConfigGatherer:
@@ -154,3 +174,13 @@ def _to_bool(val) -> bool:
     if isinstance(val, bool):
         return val
     return bool(strtobool(val))
+
+
+def _check_dt(dt: Union[datetime, dict], name: str) -> Optional[datetime]:
+    if isinstance(dt, dict):
+        dt = dt.get(name, None)
+    if dt:
+        if not dt.tzinfo:
+            raise ValueError(f"{name} must be None or an aware-datetime")
+        return dt.astimezone(pytz.UTC)
+    return None

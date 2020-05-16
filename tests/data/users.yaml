@@ -4,7 +4,7 @@
     - db: "*"
     - db: "blackwells"
       grant_type: crud
-      not_valid_after: 2050-03-23 10:51:00 -04
+      not_valid_after: 2020-05-26 10:22:00 +01
 
 - login: bridget.huntington-whiteley@acme.com
 
