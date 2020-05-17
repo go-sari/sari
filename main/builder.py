@@ -6,7 +6,7 @@ from prodict import Prodict
 
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
-from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer
+from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer, ManagedUsersGatherer
 from main.dict import dict_deep_merge
 from main.issue import Issue
 from main.mysql_gatherer import MySqlGatherer
@@ -24,6 +24,7 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
     database_config_gatherer = DatabaseConfigGatherer(config.master_password_defaults,
                                                       f"{config_dir}/{model.aws.region}/databases.yaml", aws)
     user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml")
+    managed_users_gatherer = ManagedUsersGatherer("./resources.json")
     okta_api_token = os.environ["OKTA_API_TOKEN"]
     okta_gatherer = OktaGatherer(okta_api_token, executor)
     mysql_gatherer = MySqlGatherer(executor, config.system.proxy)
@@ -38,6 +39,7 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
         #     produces() -> [aws.databases.*.endpoint]
         aws_gatherer.gather_account_info,
         database_config_gatherer.gather_rds_config,
+        managed_users_gatherer.gather_managed_users,
         aws_gatherer.gather_rds_info,
         mysql_gatherer.gather_rds_status,
         user_config_gatherer.gather_user_config,

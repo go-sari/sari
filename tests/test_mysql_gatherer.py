@@ -12,9 +12,15 @@ from tests.test_gatherers import assert_dict_equals
 @pytest.mark.testcontainer
 def test_mysql_gather_rds_status():
     db_name = "db_blackwells"
-    username = "acme"
+    username = "root"
     # noinspection HardcodedPassword
     password = "focused_mendel"
+    # TODO: launch it at startup to use the same container to test rainy-day scenarios
+    #  - connection refused
+    #  - connection timeout
+    #  - invalid username/password
+    #  - invalid schema/database name
+    #  - dropping dandling users
     with MySqlContainer("mysql:5.7.17",
                         MYSQL_DATABASE=db_name,
                         MYSQL_USER=username,
@@ -28,7 +34,6 @@ def test_mysql_gather_rds_status():
                             "address": "localhost",
                             "port": mysql.get_exposed_port(3306),
                         },
-                        "db_name": db_name,
                         "master_username": username,
                         "plain_master_password": password,
                     }
