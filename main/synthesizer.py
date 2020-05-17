@@ -141,7 +141,7 @@ class Synthesizer:
                 mysql_grant = mysql.Grant(resource_name,
                                           user=login,
                                           database=db.db_name,
-                                          host=user.host,
+                                          host="%",
                                           privileges=self.config.grant_types[grant_type],
                                           opts=pulumi.ResourceOptions(
                                               provider=provider,
