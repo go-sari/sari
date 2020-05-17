@@ -37,7 +37,7 @@ RUN set -eux; \
     # 0.0 Packages update
     apt-get update -yqq; \
     # 0.1 Install installers
-    apt-get install -yq --no-install-recommends binutils curl jq; \
+    apt-get install -yq --no-install-recommends binutils curl jq openssh-client; \
     # 1 [Pulumi]
     # 1.1 Install Pulumi & Plugins
     curl --proto '=https' --tlsv1.2 -fsSL https://get.pulumi.com/ | sh -s -- --version $pulumi_version; \
@@ -88,7 +88,7 @@ RUN set -eux; \
 USER pulumi
 
 # Copy application
-COPY --chown=pulumi:pulumi entrypoint.sh *.py Pulumi.yaml ./
+COPY --chown=pulumi:pulumi entrypoint.sh run-proxy.sh *.py Pulumi.yaml ./
 COPY --chown=pulumi:pulumi main/ $HOME/main/
 
 ENTRYPOINT [ "./entrypoint.sh" ]
