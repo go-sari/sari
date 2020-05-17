@@ -140,7 +140,7 @@ class Synthesizer:
                 self._add_resource(TYPE_MYSQL_USER, login, mysql_user)
                 mysql_grant = mysql.Grant(resource_name,
                                           user=login,
-                                          database=db_id,
+                                          database=db.db_name,
                                           host=user.host,
                                           privileges=self.config.grant_types[grant_type],
                                           opts=pulumi.ResourceOptions(
