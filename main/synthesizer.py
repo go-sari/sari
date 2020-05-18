@@ -16,14 +16,9 @@ from loguru import logger
 from prodict import Prodict
 
 from main.bastion_host import update_authorized_keys
-from main.constants import RDS_ROLE_PREFIX
 from main.dbstatus import DbStatus
 
-TYPE_AWS_IAM_ROLE = "aws:iam:Role"
-TYPE_AWS_IAM_ROLE_POLICY = "aws:iam:RolePolicy"
-TYPE_MYSQL_USER = "mysql:User"
-TYPE_MYSQL_GRANT = "mysql:Grant"
-TYPE_OKTA_APP_USER = "okta:app:User"
+SARI_ROLE_NAME = "SARI"
 
 
 class Synthesizer:
@@ -31,15 +26,12 @@ class Synthesizer:
     def __init__(self, config: Prodict, model: Prodict):
         self.config = config
         self.model = model
-        self._resources = {}
         self.aws_provider = pulumi_aws.Provider("default", region=model.aws.region)
 
     def synthesize_all(self):
         self.synthesize_cloudwatch()
         self.synthesize_iam()
         self.synthesize_mysql()
-        # TODO: maybe it's possible to detect the out-of-sync know-issue with Okta-AWS here and halt, asking for
-        #   manual intervention from the Okta Administrator
         self.synthesize_okta()
         self.synthesize_bastion_host()
 
@@ -76,43 +68,29 @@ class Synthesizer:
                 }
             }
         }])
-        for db_id, db in self.model.aws.databases.items():
-            if DbStatus[db.status] < DbStatus.ENABLED:
-                continue
-            role_name = f"{RDS_ROLE_PREFIX}{db_id}"
-            role = iam.Role(db_id,
-                            name=role_name,
-                            description=f"Allow access to '{db_id}' using db-auth-token",
-                            # TODO: tags=
-                            assume_role_policy=assume_role_policy,
-                            opts=pulumi.ResourceOptions(provider=self.aws_provider))
-            self._add_resource(TYPE_AWS_IAM_ROLE, db_id, role)
-            if db.permissions:
-                db_policy = _aws_make_policy([{
-                    "Sid": "DescribeDBInstances",
-                    "Effect": "Allow",
-                    "Action": "rds:DescribeDBInstances",
-                    "Resource": "*"
-                }] + [{
-                    "Sid": str(i),
-                    "Effect": "Allow",
-                    "Action": "rds-db:connect",
-                    "Resource": f"arn:aws:rds-db:{aws.region}:{aws.account}:dbuser:{db.dbi_resource_id}/{login}"
-                } for i, login in enumerate(db.permissions)]
-                                             )
-            else:
-                db_policy = _aws_make_policy([{
-                    "Sid": "1",
-                    "Effect": "Deny",
-                    "Action": "rds:DescribeDBInstances",
-                    "Resource": f"arn:aws:rds-db:{aws.region}:{aws.account}:dbuser:{db.dbi_resource_id}/*"
-                }])
-            role_policy = iam.RolePolicy(db_id,
-                                         name=role_name,
-                                         role=role.id,
-                                         policy=db_policy,
-                                         opts=pulumi.ResourceOptions(provider=self.aws_provider))
-            self._add_resource(TYPE_AWS_IAM_ROLE_POLICY, db_id, role_policy)
+        role = iam.Role("sari",
+                        name=SARI_ROLE_NAME,
+                        description=f"Allow access to SARI-enabled databases",
+                        assume_role_policy=assume_role_policy,
+                        opts=pulumi.ResourceOptions(provider=self.aws_provider))
+        db_policy = _aws_make_policy(
+            [{
+                "Sid": "DescribeDBInstances",
+                "Effect": "Allow",
+                "Action": "rds:DescribeDBInstances",
+                "Resource": "*"
+            }] + [{
+                "Effect": "Allow",
+                "Action": "rds-db:connect",
+                "Resource": f"arn:aws:rds-db:{aws.region}:{aws.account}:dbuser:*/{login}"
+            } for login, user in self.model.okta.users.items()
+                if user.status == "ACTIVE" and user.permissions]
+        )
+        iam.RolePolicy("sari",
+                       name=SARI_ROLE_NAME,
+                       role=role.id,
+                       policy=db_policy,
+                       opts=pulumi.ResourceOptions(provider=self.aws_provider))
 
     def synthesize_mysql(self):
         providers = {}
@@ -139,17 +117,15 @@ class Synthesizer:
                                         auth_plugin="AWSAuthenticationPlugin",
                                         tls_option="SSL",
                                         opts=pulumi.ResourceOptions(provider=provider))
-                self._add_resource(TYPE_MYSQL_USER, login, mysql_user)
-                mysql_grant = mysql.Grant(resource_name,
-                                          user=login,
-                                          database=db.db_name,
-                                          host="%",
-                                          privileges=self.config.grant_types[grant_type],
-                                          opts=pulumi.ResourceOptions(
-                                              provider=provider,
-                                              depends_on=[mysql_user]
-                                          ))
-                self._add_resource(TYPE_MYSQL_GRANT, login, mysql_grant)
+                mysql.Grant(resource_name,
+                            user=login,
+                            database=db.db_name,
+                            host="%",
+                            privileges=self.config.grant_types[grant_type],
+                            opts=pulumi.ResourceOptions(
+                                provider=provider,
+                                depends_on=[mysql_user]
+                            ))
 
     def synthesize_okta(self):
         okta = self.model.okta
@@ -158,20 +134,15 @@ class Synthesizer:
         for login, user in okta.users.items():
             if user.status != "ACTIVE":
                 continue
-            okta_user = okta_app.User(login,
-                                      app_id=app_id,
-                                      user_id=user.user_id,
-                                      username=login,
-                                      profile=json.dumps({
-                                          "email": login,
-                                          "samlRoles": [f"{RDS_ROLE_PREFIX}{db_id}" for db_id in user.permissions]
-                                      }),
-                                      opts=pulumi.ResourceOptions(
-                                          provider=provider,
-                                          depends_on=[self._get_resource(TYPE_AWS_IAM_ROLE, db_id)
-                                                      for db_id in user.permissions]
-                                      ))
-            self._add_resource(TYPE_OKTA_APP_USER, login, okta_user)
+            okta_app.User(login,
+                          app_id=app_id,
+                          user_id=user.user_id,
+                          username=login,
+                          profile=json.dumps({
+                              "email": login,
+                              "samlRoles": [SARI_ROLE_NAME]
+                          }),
+                          opts=pulumi.ResourceOptions(provider=provider))
 
     def synthesize_bastion_host(self):
         ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
@@ -199,12 +170,6 @@ class Synthesizer:
                 logger.info(f"  {login}")
         else:
             logger.info(f"  NONE")
-
-    def _add_resource(self, type_: str, name: str, res):
-        self._resources[f"{type_}::{name}"] = res
-
-    def _get_resource(self, type_: str, name):
-        return self._resources[f"{type_}::{name}"]
 
 
 def _aws_make_policy(statements: List[dict]) -> str:
