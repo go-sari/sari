@@ -45,7 +45,7 @@ class OktaGatherer:
         okta = model.okta
         session = async_retryable_session(self.executor)
         futures = []
-        searcher = jmespath.compile("[*].[id, profile.sshPubKey] | [0]")
+        searcher = jmespath.compile("[*].[id, status, profile.sshPubKey] | [0]")
         for login in okta.users:
             future = session.get(f"https://{okta.organization}.okta.com/api/v1/users?limit=1&search=profile.login+eq+" +
                                  urllib.parse.quote(f'"{login}"'),
@@ -66,28 +66,31 @@ class OktaGatherer:
             result.raise_for_status()
             json_response = json.loads(result.content.decode())
             match = searcher.search(json_response)
+            user_data = {}
             if match:
-                user_id, ssh_pubkey = match
-                if ssh_pubkey:
+                user_id, status, ssh_pubkey = match
+                if status != "ACTIVE":
+                    err_msg = f"status={status}"
+                elif ssh_pubkey:
+                    err_msg = None
                     user_data = {
-                        "status": "ACTIVE",
                         "user_id": user_id,
                         "ssh_pubkey": ssh_pubkey,
                     }
-                    color = "green"
                 else:
-                    user_data = dict(status="INACTIVE")
-                    issues.append(Issue(level=IssueLevel.ERROR, type="USER", id=login,
-                                        message="Missing SSH PubKey"))
-                    color = "light-magenta"
+                    status = "INACTIVE"
+                    err_msg = "Missing SSH PubKey"
             else:
-                user_data = dict(status="ABSENT")
+                status = "ABSENT"
+                err_msg = "Not found in OKTA"
+            user_data["status"] = status
+            if err_msg:
                 color = "red"
-                issues.append(Issue(level=IssueLevel.ERROR, type="USER", id=login,
-                                    message="Not found in OKTA"))
+                issues.append(Issue(level=IssueLevel.ERROR, type="USER", id=login, message=err_msg))
+            else:
+                color = "green"
             leader = "." * (2 + login_max_len - len(login))
-            logger.opt(colors=True).info(f"  {login} {leader} "
-                                         f"<{color}>{user_data['status']}</{color}>")
+            logger.opt(colors=True).info(f"  {login} {leader} <{color}>{status}</{color}>")
             users_ext[login] = user_data
 
         result = futures[-1].result()

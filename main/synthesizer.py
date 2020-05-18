@@ -117,6 +117,8 @@ class Synthesizer:
     def synthesize_mysql(self):
         providers = {}
         for login, user in self.model.okta.users.items():
+            if user.status != "ACTIVE":
+                continue
             for db_id, grant_type in user.permissions.items():
                 db = self.model.aws.databases[db_id]
                 if DbStatus[db.status] < DbStatus.ACCESSIBLE:
@@ -154,6 +156,8 @@ class Synthesizer:
         provider = pulumi_okta.Provider("default", org_name=okta.organization)
         app_id = okta.aws_app.app_id
         for login, user in okta.users.items():
+            if user.status != "ACTIVE":
+                continue
             okta_user = okta_app.User(login,
                                       app_id=app_id,
                                       user_id=user.user_id,

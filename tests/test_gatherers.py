@@ -264,6 +264,10 @@ class TestGatherers:
             "db_username": "tracy.mickelsen@acme.com",
             "permissions": {},
         }
+        model.okta.users["miguel.heidler@acme.com"] = {
+            "db_username": "miguel.heidler@acme.com",
+            "permissions": {},
+        }
         model.okta.aws_app.app_id = OKTA_AWS_APP_ID
 
         query_prefix = r"^limit=1&search=profile\.login\+eq\+"
@@ -300,16 +304,22 @@ class TestGatherers:
             okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
             with HTTMock(okta_user_info, okta_app_users):
                 resp, issues = okta_gatherer.gather_user_info(model)
-        assert len(issues) == 2
+        assert len(issues) == 3
         assert issues[0].level == IssueLevel.ERROR
         assert issues[0].type == "USER"
         assert issues[0].id == "valerie.tennant@acme.com"
         assert issues[1].level == IssueLevel.ERROR
         assert issues[1].type == "USER"
         assert issues[1].id == "tracy.mickelsen@acme.com"
+        assert issues[2].level == IssueLevel.ERROR
+        assert issues[2].type == "USER"
+        assert issues[2].id == "miguel.heidler@acme.com"
         assert_dict_equals(resp, {"okta": {"users": {
             "valerie.tennant@acme.com": {
                 "status": "INACTIVE",
+            },
+            "miguel.heidler@acme.com": {
+                "status": "DEPROVISIONED",
             },
             "leroy.trent@acme.com": {
                 "status": "ACTIVE",

@@ -20,3 +20,4 @@ wiki/
 
 Pulumi.*.yaml
 .coverage
+/resources.json

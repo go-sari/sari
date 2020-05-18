@@ -1,0 +1,22 @@
+[
+    {
+        "_links": {
+            "self": {
+                "href": "https://acme.okta.com/api/v1/users/00x1gy9pkaWvtNlTC648"
+            }
+        },
+        "activated": "2019-11-26T17:25:50.000Z",
+        "created": "2019-11-26T17:25:49.000Z",
+        "id": "00x1gy9pkaWvtNlTC648",
+        "profile": {
+            "displayName": "Miguel Heidler",
+            "email": "miguel.heidler@acme.com",
+            "firstName": "Miguel",
+            "lastName": "Heidler",
+            "login": "miguel.heidler@acme.com",
+            "sshPubKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIORy8bjbeGEL4U/b+ObJ2HS/3yas6BnblmV6FCy/5rdw miguel.heidler@acme.com"
+        },
+        "status": "DEPROVISIONED",
+        "statusChanged": "2020-05-15T16:14:09.000Z"
+    }
+]
