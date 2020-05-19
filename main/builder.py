@@ -1,4 +1,3 @@
-import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
@@ -14,7 +13,7 @@ from main.okta_gatherer import OktaGatherer
 
 
 def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
-    model = Prodict(aws=config.aws, okta=config.okta, job={})
+    model = Prodict(aws=config.aws, okta=config.okta, bastion_host=config.bastion_host, job={})
 
     # TODO: handle this using DI
     executor = ThreadPoolExecutor()
@@ -25,8 +24,7 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
                                                       f"{config_dir}/{model.aws.region}/databases.yaml", aws)
     user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml")
     managed_users_gatherer = ManagedUsersGatherer("./resources.json")
-    okta_api_token = os.environ["OKTA_API_TOKEN"]
-    okta_gatherer = OktaGatherer(okta_api_token, executor)
+    okta_gatherer = OktaGatherer(config.okta.api_token, executor)
     mysql_gatherer = MySqlGatherer(executor, config.system.proxy)
 
     all_issues: List[Issue] = []
@@ -43,7 +41,6 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
         aws_gatherer.gather_rds_info,
         mysql_gatherer.gather_rds_status,
         user_config_gatherer.gather_user_config,
-        okta_gatherer.gather_aws_app_info,
         okta_gatherer.gather_user_info,
     ]:
         # noinspection PyArgumentList

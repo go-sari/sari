@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -147,20 +146,20 @@ class Synthesizer:
     def synthesize_bastion_host(self):
         ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
                      if user.status == "ACTIVE"}
-        pkey = os.environ.get("BH_ADMIN_PRIVATE_KEY")
-        if pkey:
+        bh = self.model.bastion_host
+        if bh.admin_private_key:
             _, key_filename = tempfile.mkstemp(text=True)
-            Path(key_filename).write_text(pkey)
+            Path(key_filename).write_text(bh.admin_private_key)
         else:
-            key_filename = os.environ.get("BH_ADMIN_KEY_FILENAME", f"{self.config.system.config_dir}/admin_id_rsa")
+            key_filename = bh.admin_key_filename or f"{self.config.system.config_dir}/admin_id_rsa"
         logger.info("Enabling SSH access to Bastion Host:")
-        errors = update_authorized_keys(hostname=os.environ["BH_HOSTNAME"],
-                                        admin_username=os.environ["BH_ADMIN_USERNAME"],
+        errors = update_authorized_keys(hostname=bh.hostname,
+                                        admin_username=bh.admin_username,
                                         key_filename=key_filename,
-                                        passphrase=os.environ["BH_ADMIN_KEY_PASSPHRASE"],
-                                        username=os.environ["BH_PROXY_USERNAME"],
+                                        passphrase=bh.admin_key_passphrase,
+                                        username=bh.proxy_username,
                                         ssh_pub_keys=list(ssh_users.values()),
-                                        port=os.environ.get("BH_PORT"))
+                                        port=bh.port)
         if errors:
             logger.error("Errors while updating Bastion Host")
             for err in errors:

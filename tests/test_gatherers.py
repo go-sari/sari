@@ -6,7 +6,6 @@ from pprint import pformat
 from urllib.parse import unquote
 
 import boto3
-import pytest
 import pytz
 from dictdiffer import diff
 from httmock import HTTMock, response, urlmatch
@@ -70,9 +69,6 @@ MASTER_PASSWORD_DEFAULTS = {
     r"([a-z][a-z0-9-]+)": r"ssm:\1.master_password"
 }
 
-OKTA_AWS_APP_LABEL = "Amazon Web Services"
-# Extracted with:
-# $ cat tests/data/okta_apps.json | jp "[?label=='$OKTA_AWS_APP_LABEL'].id | [0]"
 OKTA_AWS_APP_ID = "7ns8u7ry8voMhQOsa644"
 OKTA_API_TOKEN = "000AmAPPcvEZ8qvjY3vwh7CS6__JrRNatR3XuvaCZx"
 
@@ -92,7 +88,7 @@ def initial_model() -> Prodict:
         "okta": {
             "organization": "acme",
             "aws_app": {
-                "label": OKTA_AWS_APP_LABEL,
+                "app_id": OKTA_AWS_APP_ID,
                 "iam_user": "OktaSSOUser"
             },
         },
@@ -216,46 +212,6 @@ class TestGatherers:
                 },
             },
         })
-
-    @pytest.mark.parametrize("app_label,present", [
-        (OKTA_AWS_APP_LABEL, True),
-        (OKTA_AWS_APP_LABEL + " (Old)", False)
-    ])
-    def test_okta_gather_aws_app_info(self, app_label, present):
-        organization = "acme"
-        model = Prodict(okta={
-            "organization": organization,
-            "aws_app": {
-                "label": app_label
-            }
-        })
-
-        # noinspection PyUnusedLocal
-        @urlmatch(scheme="https", netloc=f"{organization}.okta.com",
-                  path=r"^/api/v1/apps$",
-                  query=r"^filter=status\+eq\+%22ACTIVE%22$")
-        def okta_active_apps(url, request):
-            # pylint: disable=W0613
-            assert request.headers["Authorization"] == f"SSWS {OKTA_API_TOKEN}"
-            return response(status_code=200,
-                            content=Path("tests/data/okta_apps.json").read_text(),
-                            headers={
-                                "Content-Type": "application/json"
-                            })
-
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
-            with HTTMock(okta_active_apps):
-                resp, issues = okta_gatherer.gather_aws_app_info(model)
-        if present:
-            assert not issues
-            assert_dict_equals(resp, {"okta": {"aws_app": {"app_id": OKTA_AWS_APP_ID}}})
-        else:
-            assert len(issues) == 1
-            assert issues[0].level == IssueLevel.CRITICAL
-            assert issues[0].type == "OKTA"
-            assert issues[0].id == app_label
-            assert resp == {}
 
     def test_okta_gather_user_info(self):
         model = initial_model()

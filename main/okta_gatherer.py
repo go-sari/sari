@@ -6,10 +6,9 @@ from typing import List, Tuple
 import jmespath
 from loguru import logger
 from prodict import Prodict
-from requests import Session
 
 from main.issue import Issue, IssueLevel
-from main.rest import retryable_session, async_retryable_session
+from main.rest import async_retryable_session
 
 
 class OktaGatherer:
@@ -20,23 +19,6 @@ class OktaGatherer:
         """
         self.api_token = api_token
         self.executor = executor
-
-    def gather_aws_app_info(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        okta = model.okta
-        session: Session = retryable_session(Session())
-        response = session.get(f"https://{okta.organization}.okta.com/api/v1/apps",
-                               params={"filter": 'status eq "ACTIVE"'},
-                               headers=(self._http_headers()))
-        response.raise_for_status()
-        json_response = json.loads(response.content.decode())
-        app_id = jmespath.compile(f"[?label=='{okta.aws_app.label}'].id | [0]").search(json_response)
-        if app_id:
-            return Prodict(okta={"aws_app": {"app_id": app_id}}), []
-        else:
-            return Prodict(), [
-                Issue(level=IssueLevel.CRITICAL, type="OKTA", id=okta.aws_app.label,
-                      message="Okta application not found")
-            ]
 
     def gather_user_info(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         """
