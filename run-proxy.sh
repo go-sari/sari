@@ -16,5 +16,5 @@ ssh -fN \
     -4 -D 1080 \
     -i $TMP_KEY_FILENAME \
     -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    $BH_ADMIN_USERNAME@$BH_HOSTNAME
+    $BH_PROXY_USERNAME@$BH_HOSTNAME
 echo PROXY=socks5://localhost:1080

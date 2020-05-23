@@ -12,6 +12,7 @@ import pulumi_mysql as mysql
 import pulumi_okta
 import pulumi_okta.app as okta_app
 from loguru import logger
+from paramiko import SSHException
 from prodict import Prodict
 
 from main.bastion_host import update_authorized_keys
@@ -153,22 +154,25 @@ class Synthesizer:
         else:
             key_filename = bh.admin_key_filename or f"{self.config.system.config_dir}/admin_id_rsa"
         logger.info("Enabling SSH access to Bastion Host:")
-        errors = update_authorized_keys(hostname=bh.hostname,
-                                        admin_username=bh.admin_username,
-                                        key_filename=key_filename,
-                                        passphrase=bh.admin_key_passphrase,
-                                        username=bh.proxy_username,
-                                        ssh_pub_keys=list(ssh_users.values()),
-                                        port=bh.port)
-        if errors:
-            logger.error("Errors while updating Bastion Host")
-            for err in errors:
-                logger.error(err.strip())
-        elif ssh_users:
-            for login in ssh_users:
-                logger.info(f"  {login}")
-        else:
-            logger.info(f"  NONE")
+        try:
+            errors = update_authorized_keys(hostname=bh.hostname,
+                                            admin_username=bh.admin_username,
+                                            key_filename=key_filename,
+                                            passphrase=bh.admin_key_passphrase,
+                                            username=bh.proxy_username,
+                                            ssh_pub_keys=list(ssh_users.values()),
+                                            port=bh.port)
+            if errors:
+                logger.error("Errors while updating Bastion Host")
+                for err in errors:
+                    logger.error(err.strip())
+            elif ssh_users:
+                for login in ssh_users:
+                    logger.info(f"  {login}")
+            else:
+                logger.info(f"  NONE")
+        except SSHException as e:
+            logger.error("Errors while updating Bastion Host: {e}")
 
 
 def _aws_make_policy(statements: List[dict]) -> str:

@@ -7,7 +7,6 @@ verify_ssl = true
 coverage = "*"
 dictdiffer = "~=0.8"
 httmock = "~=1.3"
-mock-ssh-server = "*"
 moto = "==1.3.14"
 pre-commit = "~=2.2"
 pytest = "~=5.4"

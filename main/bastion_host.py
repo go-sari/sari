@@ -20,7 +20,7 @@ def update_authorized_keys(hostname: str,
                        username=admin_username,
                        passphrase=passphrase,
                        key_filename=key_filename)
-        stdin, _, stderr = client.exec_command(f"sudo -u {username} tee ~{username}/.ssh/authorized_keys")
+        stdin, _, stderr = client.exec_command(f"sudo -u {username} tee ~{username}/.ssh/authorized_keys2")
         stdin.write("\n".join(ssh_pub_keys))
         stdin.close()
         return stderr.readlines()
