@@ -21,10 +21,14 @@ WORKDIR $HOME
 ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
-ARG pulumi_version=2.2.1
-ARG pulumi_plugin_aws_version=2.5.0
-ARG pulumi_plugin_mysql_version=2.1.1
-ARG pulumi_plugin_okta_version=2.1.1
+# $ jq -r '.default.pulumi.version' Pipfile.lock | sed -e 's/^==//'
+ARG pulumi_version=2.3.0
+# $ jq -r '.default."pulumi-aws".version' Pipfile.lock | sed -e 's/^==//'
+ARG pulumi_plugin_aws_version=2.6.1
+# $ jq -r '.default."pulumi-mysql".version' Pipfile.lock | sed -e 's/^==//'
+ARG pulumi_plugin_mysql_version=2.1.2
+# $ jq -r '.default."pulumi-okta".version' Pipfile.lock | sed -e 's/^==//'
+ARG pulumi_plugin_okta_version=2.1.2
 
 # Install Pulumi & Plugins in one go
 # Optmizations that saves 175MB:
