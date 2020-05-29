@@ -5,7 +5,7 @@ from prodict import Prodict
 
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
-from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer
+from main.cfg_gatherer import UserConfigGatherer, DatabaseConfigGatherer, ServiceConfigGatherer
 from main.dict import dict_deep_merge
 from main.issue import Issue
 from main.mysql_gatherer import MySqlGatherer
@@ -23,6 +23,7 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
     database_config_gatherer = DatabaseConfigGatherer(config.master_password_defaults,
                                                       f"{config_dir}/{model.aws.region}/databases.yaml", aws)
     user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml")
+    svc_config_gatherer = ServiceConfigGatherer(f"{config_dir}/services.yaml")
     okta_gatherer = OktaGatherer(config.okta.api_token, executor)
     mysql_gatherer = MySqlGatherer(executor, config.system.proxy)
 
@@ -39,6 +40,7 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
         aws_gatherer.gather_rds_info,
         mysql_gatherer.gather_rds_status,
         user_config_gatherer.gather_user_config,
+        svc_config_gatherer.gather_service_config,
         okta_gatherer.gather_user_info,
     ]:
         # noinspection PyArgumentList

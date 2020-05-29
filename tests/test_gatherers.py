@@ -1,3 +1,4 @@
+import random
 import re
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -9,19 +10,21 @@ import boto3
 import pytz
 from dictdiffer import diff
 from httmock import HTTMock, response, urlmatch
-from moto import mock_rds2, mock_ssm, mock_sts
+from moto import mock_rds2, mock_ssm, mock_sts, mock_ec2
+from moto.ec2.utils import random_security_group_id
 from moto.iam.models import ACCOUNT_ID
 from prodict import Prodict
 
 from main.aws_client import AwsClient
 from main.aws_gatherer import AwsGatherer
-from main.cfg_gatherer import DatabaseConfigGatherer, UserConfigGatherer
+from main.cfg_gatherer import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer
+from main.dict import dict_deep_merge
 from main.issue import IssueLevel
 from main.okta_gatherer import OktaGatherer
 
 AWS_REGION = "us-west-2"
 
-# The following values are valid for moto v1.3.14
+# The constants below are valid for moto v1.3.14
 MOTO_RDS_FIXED_SUBDOMAIN = "aaaaaaaaaa"
 MOTO_RDS_FIXED_RESOURCE_ID = "db-M5ENSHXFPU6XHZ4G4ZEI5QIO2U"
 
@@ -45,6 +48,24 @@ RDS_CONFIG_DATABASES = {
     },
 }
 
+RDS_INFO_DATABASES = {
+    "blackwells": {
+        "db_name": "db_blackwells",
+        "master_username": "acme",
+        "dbi_resource_id": MOTO_RDS_FIXED_RESOURCE_ID,
+        "endpoint": {
+            "address": f"blackwells.{MOTO_RDS_FIXED_SUBDOMAIN}.{AWS_REGION}.rds.amazonaws.com",
+            "port": 3306,
+        },
+        "availability_zone": f"{AWS_REGION}a",
+        "vpc_security_group_ids": ["sg-93ad699f"],
+        "primary_subnet": "subnet-283fefc6",
+    },
+    "whsmith": {
+        "status": "ABSENT",
+    },
+}
+
 USERS_CONFIG = {
     "leroy.trent@acme.com": {
         "db_username": "leroy.trent@acme.com",
@@ -63,6 +84,19 @@ USERS_CONFIG = {
             "blackwells": "crud"
         },
     },
+}
+
+SERVICES_CONFIG = {
+    "glue_connections": {
+        "blackwells": {
+            "grant_type": "crud",
+            "physical_connection_requirements": {
+                "availability_zone": f"{AWS_REGION}a",
+                "security_group_id_list": ["sg-93ad699f"],
+                "subnet_id": "subnet-283fefc6",
+            },
+        },
+    }
 }
 
 MASTER_PASSWORD_DEFAULTS = {
@@ -123,20 +157,42 @@ class TestGatherers:
         assert issues[0].id == "daunt-books"
         assert_dict_equals(resp, {"aws": {"databases": RDS_CONFIG_DATABASES}})
 
+    @mock_ec2
     @mock_rds2
     def test_aws_gather_rds_info(self):
+        vpc_conn = boto3.client("ec2", region_name=AWS_REGION)
+        vpc = vpc_conn.create_vpc(CidrBlock="10.0.0.0/16")["Vpc"]
+        # to force a deterministic sequence of "random" numbers
+        random.seed(1)
+        subnet1 = vpc_conn.create_subnet(VpcId=vpc["VpcId"], CidrBlock="10.0.1.0/24",
+                                         AvailabilityZone=f"{AWS_REGION}a")["Subnet"]
+        subnet2 = vpc_conn.create_subnet(VpcId=vpc["VpcId"], CidrBlock="10.0.2.0/24",
+                                         AvailabilityZone=f"{AWS_REGION}b")["Subnet"]
+        subnet_ids = [subnet1["SubnetId"], subnet2["SubnetId"]]
+
         conn = boto3.client("rds", region_name=AWS_REGION)
-        for db_id, db_name in [
-            ("acme-test", "acme"),
-            ("blackwells", "db_blackwells"),
-            ("foyles", "db_foyles"),
+        conn.create_db_subnet_group(
+            DBSubnetGroupName="db_subnet",
+            DBSubnetGroupDescription="my db subnet",
+            SubnetIds=subnet_ids,
+        )
+
+        for index, db_id, db_name in [
+            (1, "acme-test", "acme"),
+            (2, "blackwells", "db_blackwells"),
+            (3, "foyles", "db_foyles"),
         ]:
             conn.create_db_instance(
                 DBInstanceIdentifier=db_id,
                 Engine="mysql",
+                EngineVersion="5.7.28",
                 DBName=db_name,
                 MasterUsername="acme",
                 DBInstanceClass="db.m1.small",
+                MultiAZ=True,
+                AvailabilityZone=f"{AWS_REGION}a",
+                VpcSecurityGroupIds=[random_security_group_id()],
+                DBSubnetGroupName="db_subnet",
             )
         aws_gatherer = AwsGatherer(AwsClient(AWS_REGION))
         model = initial_model()
@@ -149,20 +205,7 @@ class TestGatherers:
         assert issues[1].level == IssueLevel.ERROR
         assert issues[1].type == "DB"
         assert issues[1].id == "whsmith"
-        assert_dict_equals(resp, {"aws": {"databases": {
-            "blackwells": {
-                "db_name": "db_blackwells",
-                "master_username": "acme",
-                "dbi_resource_id": MOTO_RDS_FIXED_RESOURCE_ID,
-                "endpoint": {
-                    "address": f"blackwells.{MOTO_RDS_FIXED_SUBDOMAIN}.{AWS_REGION}.rds.amazonaws.com",
-                    "port": 3306,
-                },
-            },
-            "whsmith": {
-                "status": "ABSENT",
-            },
-        }}})
+        assert_dict_equals(resp, {"aws": {"databases": RDS_INFO_DATABASES}})
 
     def test_cfg_gather_user_config(self):
         model = initial_model()
@@ -212,6 +255,26 @@ class TestGatherers:
                 },
             },
         })
+
+    def test_cfg_gather_service_config(self):
+        # Given:
+        model = initial_model()
+        model.aws["databases"] = dict_deep_merge(Prodict.from_dict(RDS_CONFIG_DATABASES), RDS_INFO_DATABASES)
+        svc_config = ServiceConfigGatherer("tests/data/services.yaml")
+
+        # When:
+        resp, issues = svc_config.gather_service_config(model)
+
+        # Then:
+        assert len(issues) == 2
+        assert issues[0].level == IssueLevel.ERROR
+        assert issues[0].type == "GLUE"
+        assert issues[0].id == "whsmith"
+        assert issues[1].level == IssueLevel.ERROR
+        assert issues[1].type == "GLUE"
+        assert issues[1].id == "foyles"
+
+        assert_dict_equals(resp, {"aws": SERVICES_CONFIG})
 
     def test_okta_gather_user_info(self):
         model = initial_model()

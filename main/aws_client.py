@@ -36,6 +36,13 @@ class AwsClient:
         properties = ConfigObj(body.splitlines())
         return properties[property_name], last_modified
 
+    def glue_enum_connections(self, type_: str, catalog_id: str = None) -> List[dict]:
+        glue = self._get_session('glue')
+        return glue.get_connections(CatalogId=(catalog_id or self.get_account_id()),
+                                    Filter=dict(ConnectionType=type_),
+                                    HidePassword=True,
+                                    MaxResults=1000)['ConnectionList']
+
     def _get_session(self, service_name) -> BaseClient:
         if service_name not in self.sessions:
             self.sessions[service_name] = self.boto3_session.client(service_name)

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from prodict import Prodict
 
@@ -30,6 +30,8 @@ class AwsGatherer:
             db_id = db["DBInstanceIdentifier"]
             if db_id in configured_databases:
                 if DbStatus[configured_databases[db_id].status] == DbStatus.ENABLED:
+                    subnets_by_az = _get_subnets_by_az(db)
+                    az = db.get("AvailabilityZone", next(iter(subnets_by_az.keys())))
                     updates[db_id] = {
                         "db_name": db["DBName"],
                         "master_username": db["MasterUsername"],
@@ -38,6 +40,10 @@ class AwsGatherer:
                             "port": db["Endpoint"]["Port"],
                         },
                         "dbi_resource_id": db["DbiResourceId"],
+                        "availability_zone": az,
+                        "vpc_security_group_ids": [sg["VpcSecurityGroupId"] for sg in db["VpcSecurityGroups"]
+                                                   if sg["Status"] == "active"],
+                        "primary_subnet": subnets_by_az[az][0]
                     }
                 else:
                     del updates[db_id]
@@ -49,3 +55,11 @@ class AwsGatherer:
                 issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
                                     message="Not found in AWS"))
         return Prodict(aws={"databases": updates}), issues
+
+
+def _get_subnets_by_az(db) -> Dict[str, List[str]]:
+    subnets = {}
+    for sn in db["DBSubnetGroup"]["Subnets"]:
+        if sn["SubnetStatus"] == "Active":
+            subnets.setdefault(sn["SubnetAvailabilityZone"]["Name"], []).append(sn["SubnetIdentifier"])
+    return subnets

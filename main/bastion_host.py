@@ -17,6 +17,7 @@ def update_authorized_keys(hostname: str,
         client.connect(hostname,
                        port=(port or SSH_PORT),
                        timeout=5,
+                       banner_timeout=5,
                        username=admin_username,
                        passphrase=passphrase,
                        key_filename=key_filename)

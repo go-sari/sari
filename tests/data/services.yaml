@@ -1,0 +1,7 @@
+glue_connections:
+  - db: blackwells
+    grant_type: crud
+
+  - db: whsmith
+
+  - db: foyles

@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -7,16 +8,20 @@ from typing import List
 import pulumi
 import pulumi_aws
 import pulumi_aws.cloudwatch as cloudwatch
+import pulumi_aws.glue as glue
 import pulumi_aws.iam as iam
 import pulumi_mysql as mysql
 import pulumi_okta
 import pulumi_okta.app as okta_app
+import pulumi_random as random
 from loguru import logger
 from paramiko import SSHException
 from prodict import Prodict
 
 from main.bastion_host import update_authorized_keys
 from main.dbstatus import DbStatus
+
+ANY_HOST = "%"
 
 SARI_ROLE_NAME = "SARI"
 
@@ -27,11 +32,13 @@ class Synthesizer:
         self.config = config
         self.model = model
         self.aws_provider = pulumi_aws.Provider("default", region=model.aws.region)
+        self._mysql_providers = {}
 
     def synthesize_all(self):
         self.synthesize_cloudwatch()
         self.synthesize_iam()
         self.synthesize_mysql()
+        self.synthesize_glue_connections()
         self.synthesize_okta()
         self.synthesize_bastion_host()
 
@@ -93,7 +100,6 @@ class Synthesizer:
                        opts=pulumi.ResourceOptions(provider=self.aws_provider))
 
     def synthesize_mysql(self):
-        providers = {}
         for login, user in self.model.okta.users.items():
             if user.status != "ACTIVE":
                 continue
@@ -101,35 +107,29 @@ class Synthesizer:
                 db = self.model.aws.databases[db_id]
                 if DbStatus[db.status] < DbStatus.ACCESSIBLE:
                     continue
-                provider = providers.get(db_id, None)
-                if not provider:
-                    provider = mysql.Provider(db_id,
-                                              endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
-                                              proxy=self.config.system.proxy,
-                                              username=db.master_username,
-                                              # TODO: use password retrieved from SSM at execution time
-                                              password=db.plain_master_password)
-                    providers[db_id] = provider
+                provider = self._get_mysql_provider(db_id, db)
                 resource_name = f"{db_id}/{login}"
                 mysql_user = mysql.User(resource_name,
                                         user=login,
-                                        host="%",
+                                        host=ANY_HOST,
                                         auth_plugin="AWSAuthenticationPlugin",
                                         tls_option="SSL",
                                         opts=pulumi.ResourceOptions(provider=provider))
                 mysql.Grant(resource_name,
-                            user=login,
+                            user=mysql_user.user,
                             database=db.db_name,
-                            host="%",
+                            host=ANY_HOST,
                             privileges=self.config.grant_types[grant_type],
                             opts=pulumi.ResourceOptions(
                                 provider=provider,
-                                depends_on=[mysql_user]
+                                delete_before_replace=True
                             ))
 
     def synthesize_okta(self):
         okta = self.model.okta
-        provider = pulumi_okta.Provider("default", org_name=okta.organization)
+        provider = pulumi_okta.Provider("default",
+                                        api_token=pulumi.Output.secret(os.environ["OKTA_API_TOKEN"]),
+                                        org_name=okta.organization)
         app_id = okta.aws_app.app_id
         for login, user in okta.users.items():
             if user.status != "ACTIVE":
@@ -143,6 +143,42 @@ class Synthesizer:
                               "samlRoles": [SARI_ROLE_NAME]
                           }),
                           opts=pulumi.ResourceOptions(provider=provider))
+
+    def synthesize_glue_connections(self):
+        glue_connections = self.model.aws.glue_connections
+        databases = self.model.aws.databases
+        for db_id, con in glue_connections.items():
+            db = databases[db_id]
+            resource_name = f"glue/{db_id}"
+            password = random.RandomPassword(resource_name,
+                                             length=64,
+                                             special=False,
+                                             opts=pulumi.ResourceOptions(additional_secret_outputs=["result"]))
+            login = "glue.amazonaws.com"
+            provider = self._get_mysql_provider(db_id, db)
+            mysql_user = mysql.User(resource_name,
+                                    user=login,
+                                    host=ANY_HOST,
+                                    plaintext_password=password.result,
+                                    tls_option="SSL",
+                                    opts=pulumi.ResourceOptions(provider=provider))
+            mysql.Grant(resource_name,
+                        user=mysql_user.user,
+                        database=db.db_name,
+                        host=mysql_user.host,
+                        privileges=self.config.grant_types[con.grant_type],
+                        opts=pulumi.ResourceOptions(provider=provider, delete_before_replace=True))
+            glue.Connection(resource_name,
+                            name=f"sari.{db_id}",
+                            connection_type="JDBC",
+                            connection_properties={
+                                "JDBC_CONNECTION_URL": f"jdbc:mysql://{db.endpoint.address}:{db.endpoint.port}/"
+                                                       f"{db.db_name}",
+                                "JDBC_ENFORCE_SSL": "true",
+                                "USERNAME": login,
+                                "PASSWORD": password.result,
+                            },
+                            physical_connection_requirements=con.physical_connection_requirements)
 
     def synthesize_bastion_host(self):
         ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
@@ -172,7 +208,18 @@ class Synthesizer:
             else:
                 logger.info(f"  NONE")
         except SSHException as e:
-            logger.error("Errors while updating Bastion Host: {e}")
+            logger.error(f"Errors while updating Bastion Host: {e}")
+
+    def _get_mysql_provider(self, db_id, db):
+        provider = self._mysql_providers.get(db_id, None)
+        if not provider:
+            provider = mysql.Provider(db_id,
+                                      endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
+                                      proxy=self.config.system.proxy,
+                                      username=db.master_username,
+                                      password=pulumi.Output.secret(db.plain_master_password))
+            self._mysql_providers[db_id] = provider
+        return provider
 
 
 def _aws_make_policy(statements: List[dict]) -> str:
