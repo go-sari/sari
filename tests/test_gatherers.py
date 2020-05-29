@@ -89,7 +89,7 @@ def initial_model() -> Prodict:
             "organization": "acme",
             "aws_app": {
                 "app_id": OKTA_AWS_APP_ID,
-                "iam_user": "OktaSSOUser"
+                "iam_idp": "Okta"
             },
         },
         "job": {},

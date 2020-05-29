@@ -22,7 +22,7 @@ def load_config() -> Prodict:
             "api_token": os.environ["OKTA_API_TOKEN"],
             "aws_app": {
                 "app_id": os.environ["OKTA_AWS_APP_ID"],
-                "iam_user": os.environ["OKTA_AWS_APP_IAM_USER"],
+                "iam_idp": os.environ["OKTA_AWS_APP_IAM_IDP"],
             }
         },
         "bastion_host": {

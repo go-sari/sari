@@ -59,7 +59,7 @@ class Synthesizer:
             "Sid": "1",
             "Effect": "Allow",
             "Principal": {
-                "Federated": f"arn:aws:iam::{aws.account}:saml-provider/{okta.aws_app.iam_user}"
+                "Federated": f"arn:aws:iam::{aws.account}:saml-provider/{okta.aws_app.iam_idp}"
             },
             "Action": "sts:AssumeRoleWithSAML",
             "Condition": {
