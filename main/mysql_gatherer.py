@@ -1,5 +1,4 @@
 import socket
-import textwrap
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Tuple, List, Optional
 from urllib.parse import urlparse
@@ -47,7 +46,7 @@ class MySqlGatherer:
         accessible = dict(status=DbStatus.ACCESSIBLE.name)
         for db_id, future in zip(databases, futures):
             if future:
-                success, message, extra_message = future.result(MYSQL_LOGIN_TIMEOUT)
+                success, message = future.result(MYSQL_LOGIN_TIMEOUT)
                 color = ("red", "green")[success]
                 if success:
                     updates[db_id] = accessible
@@ -55,17 +54,14 @@ class MySqlGatherer:
                     issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
                                         message=message))
             else:
-                success, message, extra_message = (False, databases[db_id].status, None)
+                success, message = (False, databases[db_id].status)
                 color = "light-magenta"
             leader = "." * (2 + db_id_max_len - len(db_id))
             logger.opt(colors=True).info(f"  {db_id} {leader} <{color}>{message}</{color}>")
-            if extra_message:
-                color = "light-yellow"
-                logger.opt(colors=True).info(f"  {' ' * (3 + db_id_max_len)} <{color}>{extra_message}</{color}>")
         return Prodict(aws={"databases": updates}), issues
 
 
-def _check_mysql_instance(db) -> Tuple[bool, str, Optional[str]]:
+def _check_mysql_instance(db) -> Tuple[bool, str]:
     """For a particular RDS instances: check if it's possible to connect, authenticate with credentials,
     and get authorized access to the primary DB.
 
@@ -84,40 +80,13 @@ def _check_mysql_instance(db) -> Tuple[bool, str, Optional[str]]:
                                              # Only Pure Python connector implementation supports SOCKS5
                                              use_pure=True)
         db_info = connection.get_server_info()
-        extra_msg = _drop_dangling_users(db, connection)
-        return True, f'OK ("MySQL Server version {db_info}")', extra_msg
+        return True, f'OK ("MySQL Server version {db_info}")'
     except Exception as e:
-        return False, f'ERROR: {str(e)}', None
+        return False, f'ERROR: {str(e)}'
     finally:
         if connection and connection.is_connected():
             connection.commit()
             connection.close()
-
-
-def _drop_dangling_users(db, connection) -> Optional[str]:
-    query = connection.cursor()
-    try:
-        query.execute(textwrap.dedent("""
-                SELECT user,
-                       host
-                  FROM user
-                 WHERE POSITION('@' IN user) > 0
-            """))
-        managed_users = db.managed_users or set()
-        users_to_drop = {f"'{user}'@'{host}'" for user, host in query.fetchall()
-                         if user not in managed_users}
-    finally:
-        query.close()
-    msg = None
-    if users_to_drop:
-        update = connection.cursor()
-        try:
-            stmt = f"DROP USER {', '.join(users_to_drop)}"
-            update.execute(stmt)
-            msg = stmt
-        finally:
-            update.close()
-    return msg
 
 
 class _ProxyContext:

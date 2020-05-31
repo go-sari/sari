@@ -1,4 +1,3 @@
-import json
 import re
 from datetime import datetime, timedelta
 from distutils.util import strtobool
@@ -169,27 +168,6 @@ class DatabaseConfigGatherer:
             if match:
                 return match.expand(template)
         return None
-
-
-class ManagedUsersGatherer:
-    def __init__(self, cfg_filename: str):
-        self.cfg_filename = cfg_filename
-
-    def gather_managed_users(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        # Pulumi specific pattern
-        pat = re.compile(r"urn:pulumi:.*::mysql:index/user:User::([a-z-]+)/(\S+)")
-        with open(self.cfg_filename) as file:
-            urn_list: List[str] = json.load(file)
-        db_users = {}
-        db_id_list = model.aws.databases.keys()
-        for urn in urn_list:
-            m = pat.match(urn)
-            if m:
-                db_id, login = (m.group(1), m.group(2))
-                if db_id in db_id_list:
-                    db_users.setdefault(db_id, set()).add(login)
-        updates = {db_id: dict(managed_users=users) for db_id, users in db_users.items()}
-        return Prodict(aws={"databases": updates}), []
 
 
 def _to_bool(val) -> bool:

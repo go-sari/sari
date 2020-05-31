@@ -12,5 +12,4 @@ else
 fi
 
 pulumi --non-interactive stack select $PULUMI_STACK_NAME --create
-pulumi --non-interactive stack export | jq '[.deployment.resources[]? | .urn]' > resources.json
 pulumi --non-interactive --logtostderr -v=${PULUMI_LOG_LEVEL:-2} ${PULUMI_ACTION:-preview}
