@@ -33,6 +33,11 @@ class Synthesizer:
         self.model = model
         self.aws_provider = pulumi_aws.Provider("default", region=model.aws.region)
         self._mysql_providers = {}
+        self.standard_tags = {
+            "Provisioning": "SARI",
+            "sari:configuration": _get_sari_configuration_repo(),
+            "sari:project": _get_ci_project_url(),
+        }
 
     def synthesize_all(self):
         self.synthesize_cloudwatch()
@@ -50,6 +55,7 @@ class Synthesizer:
         rule_name = "build-sari-start"
         cloudwatch.EventRule(rule_name,
                              name=rule_name,
+                             tags=self.standard_tags,
                              description="Trigger SARI Build for Next Transition",
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
                              opts=pulumi.ResourceOptions(provider=self.aws_provider))
@@ -78,6 +84,7 @@ class Synthesizer:
         role = iam.Role("sari",
                         name=SARI_ROLE_NAME,
                         description=f"Allow access to SARI-enabled databases",
+                        tags=self.standard_tags,
                         assume_role_policy=assume_role_policy,
                         opts=pulumi.ResourceOptions(provider=self.aws_provider))
         db_policy = _aws_make_policy(
@@ -170,6 +177,7 @@ class Synthesizer:
                         opts=pulumi.ResourceOptions(provider=provider, delete_before_replace=True))
             glue.Connection(resource_name,
                             name=f"sari.{db_id}",
+                            description="Provisioned by SARI -- DO NOT EDIT",
                             connection_type="JDBC",
                             connection_properties={
                                 "JDBC_CONNECTION_URL": f"jdbc:mysql://{db.endpoint.address}:{db.endpoint.port}/"
@@ -220,6 +228,19 @@ class Synthesizer:
                                       password=pulumi.Output.secret(db.plain_master_password))
             self._mysql_providers[db_id] = provider
         return provider
+
+
+def _get_sari_configuration_repo():
+    return os.environ.get("CODEBUILD_SOURCE_REPO_URL") or os.environ.get("CONFIG") or "UNKNOWN"
+
+
+def _get_ci_project_url():
+    cb_arn = os.environ.get("CODEBUILD_BUILD_ARN")
+    if cb_arn:
+        _, _, _, region, account, path, *_ = cb_arn.split(":")
+        return f"https://{region}.console.aws.amazon.com/codesuite/codebuild/{account}/" \
+               f"{path.replace('build/', 'projects/')}"
+    return "UNKNOWN"
 
 
 def _aws_make_policy(statements: List[dict]) -> str:
