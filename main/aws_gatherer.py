@@ -14,7 +14,7 @@ class AwsGatherer:
         self.aws = aws
 
     # noinspection PyUnusedLocal
-    def gather_account_info(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather_general_info(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         # pylint: disable=W0613
         """
         Get the AWS account number.
@@ -31,7 +31,10 @@ class AwsGatherer:
             if db_id in configured_databases:
                 if DbStatus[configured_databases[db_id].status] == DbStatus.ENABLED:
                     subnets_by_az = _get_subnets_by_az(db)
-                    az = db.get("AvailabilityZone", next(iter(subnets_by_az.keys())))
+                    az = db.get("AvailabilityZone",
+                                # Chose the AZ of the first subnet arbitrarily.
+                                # Required for MOTO since AZ is not defined.
+                                next(iter(subnets_by_az.keys())))
                     updates[db_id] = {
                         "db_name": db["DBName"],
                         "master_username": db["MasterUsername"],

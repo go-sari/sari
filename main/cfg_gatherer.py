@@ -1,4 +1,3 @@
-import os
 import re
 from datetime import datetime, timedelta
 from distutils.util import strtobool
@@ -14,7 +13,7 @@ from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
 from main.misc import wc_expand
 
-# Limited by MySQL. See https://dev.mysql.com/doc/refman/8.0/en/user-names.html
+# Limited by MySQL. See https://dev.mysql.com/doc/refman/5.7/en/user-names.html
 MAX_DB_USERNAME_LENGTH = 32
 DEFAULT_GRANT_TYPE = 'query'
 
@@ -175,35 +174,32 @@ class ServiceConfigGatherer:
     def __init__(self, cfg_filename: str):
         self.cfg_filename = cfg_filename
 
-    # noinspection PyUnusedLocal
     def gather_service_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        # pylint: disable=W0613
         issues = []
         updates = {}
-        if os.path.exists(self.cfg_filename):
-            with open(self.cfg_filename) as file:
-                services = yaml.safe_load(file)
-            enabled_databases = [db_id for db_id, db in model.aws.databases.items()
-                                 if DbStatus[db.status] >= DbStatus.ENABLED]
-            for conn in services.get("glue_connections", []):
-                db_ref = conn['db']
-                db_id_list = wc_expand(db_ref, enabled_databases)
-                if not db_id_list:
-                    issues.append(Issue(level=IssueLevel.ERROR, type='GLUE', id=db_ref,
-                                        message=f"Not existing and enabled DB instance reference '{db_ref}'"))
-                    continue
-                pcr = conn.get("physical_connection_requirements", {})
-                grant_type = conn.get("grant_type", DEFAULT_GRANT_TYPE)
-                for db_id in db_id_list:
-                    db = model.aws.databases[db_id]
-                    updates[db_id] = {
-                        "grant_type": grant_type,
-                        "physical_connection_requirements": {
-                            "availability_zone": pcr.get("availability_zone", db.availability_zone),
-                            "security_group_id_list": pcr.get("security_group_id_list", db.vpc_security_group_ids),
-                            "subnet_id": pcr.get("subnet_id", db.primary_subnet),
-                        },
-                    }
+        with open(self.cfg_filename) as file:
+            services = yaml.safe_load(file)
+        enabled_databases = [db_id for db_id, db in model.aws.databases.items()
+                             if DbStatus[db.status] >= DbStatus.ENABLED]
+        for conn in services.get("glue_connections", []):
+            db_ref = conn['db']
+            db_id_list = wc_expand(db_ref, enabled_databases)
+            if not db_id_list:
+                issues.append(Issue(level=IssueLevel.ERROR, type='GLUE', id=db_ref,
+                                    message=f"Not existing and enabled DB instance reference '{db_ref}'"))
+                continue
+            pcr = conn.get("physical_connection_requirements", {})
+            grant_type = conn.get("grant_type", DEFAULT_GRANT_TYPE)
+            for db_id in db_id_list:
+                db = model.aws.databases[db_id]
+                updates[db_id] = {
+                    "grant_type": grant_type,
+                    "physical_connection_requirements": {
+                        "availability_zone": pcr.get("availability_zone", db.availability_zone),
+                        "security_group_id_list": pcr.get("security_group_id_list", db.vpc_security_group_ids),
+                        "subnet_id": pcr.get("subnet_id", db.primary_subnet),
+                    },
+                }
         return Prodict(aws={"glue_connections": updates}), issues
 
 

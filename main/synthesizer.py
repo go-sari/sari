@@ -135,7 +135,7 @@ class Synthesizer:
     def synthesize_okta(self):
         okta = self.model.okta
         provider = pulumi_okta.Provider("default",
-                                        api_token=pulumi.Output.secret(os.environ["OKTA_API_TOKEN"]),
+                                        api_token=pulumi.Output.secret(okta.api_token),
                                         org_name=okta.organization)
         app_id = okta.aws_app.app_id
         for login, user in okta.users.items():

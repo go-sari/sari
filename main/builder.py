@@ -1,5 +1,6 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 
 from prodict import Prodict
 
@@ -14,36 +15,32 @@ from main.okta_gatherer import OktaGatherer
 
 def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
     model = Prodict(aws=config.aws, okta=config.okta, bastion_host=config.bastion_host, job={})
-
-    # TODO: handle this using DI
-    executor = ThreadPoolExecutor()
-    aws = AwsClient(model.aws.region)
-    aws_gatherer = AwsGatherer(aws)
     config_dir = config.system.config_dir
-    database_config_gatherer = DatabaseConfigGatherer(config.master_password_defaults,
-                                                      f"{config_dir}/{model.aws.region}/databases.yaml", aws)
-    user_config_gatherer = UserConfigGatherer(f"{config_dir}/users.yaml")
-    svc_config_gatherer = ServiceConfigGatherer(f"{config_dir}/services.yaml")
+    executor = ThreadPoolExecutor()
+
+    aws = AwsClient(model.aws.region)
+
+    gatherers: List[Callable[[Prodict], Tuple[Prodict, List[Issue]]]] = []
+
+    aws_gatherer = AwsGatherer(aws)
+    gatherers.append(aws_gatherer.gather_general_info)
+
+    gatherers.append(DatabaseConfigGatherer(config.master_password_defaults,
+                                            f"{config_dir}/{model.aws.region}/databases.yaml", aws).gather_rds_config)
+    gatherers.append(aws_gatherer.gather_rds_info)
+
+    gatherers.append(MySqlGatherer(executor, config.system.proxy).gather_rds_status)
+
+    gatherers.append(UserConfigGatherer(f"{config_dir}/users.yaml").gather_user_config)
+
+    services_yaml = f"{config_dir}/services.yaml"
+    if os.path.exists(services_yaml):
+        gatherers.append(ServiceConfigGatherer(services_yaml).gather_service_config)
     okta_gatherer = OktaGatherer(config.okta.api_token, executor)
-    mysql_gatherer = MySqlGatherer(executor, config.system.proxy)
+    gatherers.append(okta_gatherer.gather_user_info)
 
     all_issues: List[Issue] = []
-    for gatherer in [
-        # TODO: infer this order based on some explicit declaration like:
-        #   1. Having 1 class for each gatherer
-        #   2. This class reports 'requires' and 'produces'
-        #   Example for AwsGatherer.gather_rds_info:
-        #     requires() -> [aws.databases.*]
-        #     produces() -> [aws.databases.*.endpoint]
-        aws_gatherer.gather_account_info,
-        database_config_gatherer.gather_rds_config,
-        aws_gatherer.gather_rds_info,
-        mysql_gatherer.gather_rds_status,
-        user_config_gatherer.gather_user_config,
-        svc_config_gatherer.gather_service_config,
-        okta_gatherer.gather_user_info,
-    ]:
-        # noinspection PyArgumentList
+    for gatherer in gatherers:
         delta, issues = gatherer(model)
         all_issues.extend(issues)
         dict_deep_merge(model, delta)

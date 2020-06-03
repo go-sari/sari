@@ -135,7 +135,7 @@ class TestGatherers:
     @mock_sts
     def test_aws_gather_account_info(self):
         aws_gatherer = AwsGatherer(AwsClient(AWS_REGION))
-        resp, issues = aws_gatherer.gather_account_info(initial_model())
+        resp, issues = aws_gatherer.gather_general_info(initial_model())
         assert_dict_equals(resp, {"aws": {"account": str(ACCOUNT_ID)}})
 
     @mock_ssm
