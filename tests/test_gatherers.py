@@ -2,11 +2,14 @@ import random
 import re
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from pprint import pformat
+from typing import List, Tuple
 from urllib.parse import unquote
 
 import boto3
+import pytest
 import pytz
 from dictdiffer import diff
 from httmock import HTTMock, response, urlmatch
@@ -22,24 +25,34 @@ from main.dict import dict_deep_merge
 from main.issue import IssueLevel
 from main.okta_gatherer import OktaGatherer
 
-AWS_REGION = "us-west-2"
+AWS_REGION_US = "us-east-1"
+AWS_REGION_UK = "eu-west-2"
+
+AWS_REGIONS = [AWS_REGION_UK, AWS_REGION_US]
 
 # The constants below are valid for moto v1.3.14
 MOTO_RDS_FIXED_SUBDOMAIN = "aaaaaaaaaa"
 MOTO_RDS_FIXED_RESOURCE_ID = "db-M5ENSHXFPU6XHZ4G4ZEI5QIO2U"
 
 RDS_CONFIG_DATABASES = {
-    "blackwells": {
+    f"{AWS_REGION_US}/borders": {
+        "status": "ENABLED",
+        "ssm_master_password": "borders.master_password",
+        "plain_master_password": "vigilant_swirles",
+        "password_age": False,
+        "permissions": {},
+    },
+    f"{AWS_REGION_UK}/blackwells": {
         "status": "ENABLED",
         "ssm_master_password": "blackwells.master_password",
         "plain_master_password": "focused_mendel",
         "password_age": False,
         "permissions": {},
     },
-    "foyles": {
+    f"{AWS_REGION_UK}/foyles": {
         "status": "DISABLED",
     },
-    "whsmith": {
+    f"{AWS_REGION_UK}/whsmith": {
         "status": "ENABLED",
         "ssm_master_password": "whsmith.master_password",
         "plain_master_password": "quirky_ganguly",
@@ -49,19 +62,31 @@ RDS_CONFIG_DATABASES = {
 }
 
 RDS_INFO_DATABASES = {
-    "blackwells": {
+    f"{AWS_REGION_US}/borders": {
+        "db_name": "db_borders",
+        "master_username": "acme",
+        "dbi_resource_id": MOTO_RDS_FIXED_RESOURCE_ID,
+        "endpoint": {
+            "address": f"borders.{MOTO_RDS_FIXED_SUBDOMAIN}.{AWS_REGION_US}.rds.amazonaws.com",
+            "port": 3306,
+        },
+        "availability_zone": f"{AWS_REGION_US}a",
+        "vpc_security_group_ids": ["sg-93ad699f"],
+        "primary_subnet": "subnet-283fefc6",
+    },
+    f"{AWS_REGION_UK}/blackwells": {
         "db_name": "db_blackwells",
         "master_username": "acme",
         "dbi_resource_id": MOTO_RDS_FIXED_RESOURCE_ID,
         "endpoint": {
-            "address": f"blackwells.{MOTO_RDS_FIXED_SUBDOMAIN}.{AWS_REGION}.rds.amazonaws.com",
+            "address": f"blackwells.{MOTO_RDS_FIXED_SUBDOMAIN}.{AWS_REGION_UK}.rds.amazonaws.com",
             "port": 3306,
         },
-        "availability_zone": f"{AWS_REGION}a",
+        "availability_zone": f"{AWS_REGION_UK}a",
         "vpc_security_group_ids": ["sg-93ad699f"],
         "primary_subnet": "subnet-283fefc6",
     },
-    "whsmith": {
+    f"{AWS_REGION_UK}/whsmith": {
         "status": "ABSENT",
     },
 }
@@ -70,8 +95,9 @@ USERS_CONFIG = {
     "leroy.trent@acme.com": {
         "db_username": "leroy.trent@acme.com",
         "permissions": {
-            "blackwells": "crud",
-            "whsmith": "query"
+            f"{AWS_REGION_US}/borders": "query",
+            f"{AWS_REGION_UK}/blackwells": "query",
+            f"{AWS_REGION_UK}/whsmith": "crud",
         },
     },
     "bridget.huntington-whiteley@acme.com": {
@@ -81,17 +107,17 @@ USERS_CONFIG = {
     "valerie.tennant@acme.com": {
         "db_username": "valerie.tennant@acme.com",
         "permissions": {
-            "blackwells": "crud"
+            f"{AWS_REGION_UK}/blackwells": "crud"
         },
     },
 }
 
 SERVICES_CONFIG = {
     "glue_connections": {
-        "blackwells": {
+        f"{AWS_REGION_UK}/blackwells": {
             "grant_type": "crud",
             "physical_connection_requirements": {
-                "availability_zone": f"{AWS_REGION}a",
+                "availability_zone": f"{AWS_REGION_UK}a",
                 "security_group_id_list": ["sg-93ad699f"],
                 "subnet_id": "subnet-283fefc6",
             },
@@ -117,7 +143,7 @@ def assert_dict_equals(actual: dict, expected: dict):
 def initial_model() -> Prodict:
     return Prodict.from_dict({
         "aws": {
-            "region": AWS_REGION,
+            "regions": [AWS_REGION_US, AWS_REGION_UK],
         },
         "okta": {
             "organization": "acme",
@@ -134,103 +160,127 @@ class TestGatherers:
 
     @mock_sts
     def test_aws_gather_account_info(self):
-        aws_gatherer = AwsGatherer(AwsClient(AWS_REGION))
+        # Given:
+        aws_gatherer = AwsGatherer(AwsClient(AWS_REGIONS[0]))
+
+        # When:
         resp, issues = aws_gatherer.gather_general_info(initial_model())
+
+        # Then:
         assert_dict_equals(resp, {"aws": {"account": str(ACCOUNT_ID)}})
 
     @mock_ssm
-    def test_cfg_gather_rds_config(self):
-        client = boto3.client("ssm", region_name=AWS_REGION)
-        client.put_parameter(
-            Name="blackwells.master_password", Value="focused_mendel", Type="SecureString"
-        )
-        client.put_parameter(
-            Name="whsmith.master_password", Value="quirky_ganguly", Type="SecureString"
-        )
-        aws_client = AwsClient(AWS_REGION)
-        resp, issues = DatabaseConfigGatherer(MASTER_PASSWORD_DEFAULTS,
-                                              "tests/data/databases.yaml",
+    @pytest.mark.parametrize("region, okay_instances, cfg_error_instances", [
+        (AWS_REGION_US, ["borders"], []),
+        (AWS_REGION_UK, ["blackwells", "whsmith"], ["daunt-books"])
+    ])
+    def test_cfg_gather_rds_config(self, region: str,
+                                   okay_instances: List[str],
+                                   cfg_error_instances: List[str]):
+        # Given:
+        ssm = boto3.client("ssm", region_name=region)
+        for db_id in okay_instances:
+            ssm.put_parameter(
+                Name=f"{db_id}.master_password",
+                Value=RDS_CONFIG_DATABASES[f"{region}/{db_id}"]["plain_master_password"],
+                Type="SecureString"
+            )
+        aws_client = AwsClient(region)
+        local_databases = {k: v for k, v in RDS_CONFIG_DATABASES.items() if k.startswith(f"{region}/")}
+
+        # When:
+        resp, issues = DatabaseConfigGatherer(region, MASTER_PASSWORD_DEFAULTS,
+                                              f"tests/data/{region}/databases.yaml",
                                               aws_client).gather_rds_config(initial_model())
-        assert len(issues) == 1
-        assert issues[0].level == IssueLevel.ERROR
-        assert issues[0].type == "DB"
-        assert issues[0].id == "daunt-books"
-        assert_dict_equals(resp, {"aws": {"databases": RDS_CONFIG_DATABASES}})
+
+        # Then:
+        assert len(issues) == len(cfg_error_instances)
+        for index, id_ in enumerate(cfg_error_instances):
+            assert issues[index].level == IssueLevel.ERROR
+            assert issues[index].type == "DB"
+            assert issues[index].id == f"{region}/{id_}"
+        assert_dict_equals(resp, {"aws": {"databases": local_databases}})
 
     @mock_ec2
     @mock_rds2
-    def test_aws_gather_rds_info(self):
-        vpc_conn = boto3.client("ec2", region_name=AWS_REGION)
-        vpc = vpc_conn.create_vpc(CidrBlock="10.0.0.0/16")["Vpc"]
-        # to force a deterministic sequence of "random" numbers
-        random.seed(1)
-        subnet1 = vpc_conn.create_subnet(VpcId=vpc["VpcId"], CidrBlock="10.0.1.0/24",
-                                         AvailabilityZone=f"{AWS_REGION}a")["Subnet"]
-        subnet2 = vpc_conn.create_subnet(VpcId=vpc["VpcId"], CidrBlock="10.0.2.0/24",
-                                         AvailabilityZone=f"{AWS_REGION}b")["Subnet"]
-        subnet_ids = [subnet1["SubnetId"], subnet2["SubnetId"]]
-
-        conn = boto3.client("rds", region_name=AWS_REGION)
-        conn.create_db_subnet_group(
-            DBSubnetGroupName="db_subnet",
-            DBSubnetGroupDescription="my db subnet",
-            SubnetIds=subnet_ids,
-        )
-
-        for index, db_id, db_name in [
-            (1, "acme-test", "acme"),
-            (2, "blackwells", "db_blackwells"),
-            (3, "foyles", "db_foyles"),
-        ]:
-            conn.create_db_instance(
+    @pytest.mark.parametrize("region, present_instances, absent_instances", [
+        (AWS_REGION_US, ["borders"], []),
+        (AWS_REGION_UK, ["blackwells", "foyles"], ["whsmith"]),
+    ])
+    def test_aws_gather_rds_info(self, region: str,
+                                 present_instances: List[str],
+                                 absent_instances: List[str]):
+        # Given:
+        _create_subnets("db_subnet", region, "10.0.0.0/16", [("a", "10.0.1.0/24"), ("b", "10.0.2.0/24")])
+        rds = boto3.client("rds", region_name=region)
+        instances = present_instances
+        instances.insert(0, "acme-test")
+        for index, db_id in enumerate(instances):
+            rds.create_db_instance(
                 DBInstanceIdentifier=db_id,
                 Engine="mysql",
                 EngineVersion="5.7.28",
-                DBName=db_name,
+                DBName=f"db_{db_id}",
                 MasterUsername="acme",
                 DBInstanceClass="db.m1.small",
                 MultiAZ=True,
-                AvailabilityZone=f"{AWS_REGION}a",
+                AvailabilityZone=f"{AWS_REGION_UK}a",
                 VpcSecurityGroupIds=[random_security_group_id()],
                 DBSubnetGroupName="db_subnet",
             )
-        aws_gatherer = AwsGatherer(AwsClient(AWS_REGION))
+        aws_gatherer = AwsGatherer(AwsClient(region))
         model = initial_model()
         model.aws["databases"] = Prodict.from_dict(RDS_CONFIG_DATABASES)
+        local_databases = {k: v for k, v in RDS_INFO_DATABASES.items() if k.startswith(f"{region}/")}
+
+        # When:
         resp, issues = aws_gatherer.gather_rds_info(model)
-        assert len(issues) == 2
+
+        # Then:
+        assert len(issues) == 1 + len(absent_instances)
         assert issues[0].level == IssueLevel.WARNING
         assert issues[0].type == "DB"
-        assert issues[0].id == "acme-test"
-        assert issues[1].level == IssueLevel.ERROR
-        assert issues[1].type == "DB"
-        assert issues[1].id == "whsmith"
-        assert_dict_equals(resp, {"aws": {"databases": RDS_INFO_DATABASES}})
+        assert issues[0].id == f"{region}/acme-test"
+        for index, db_id in enumerate(absent_instances, 1):
+            assert issues[index].level == IssueLevel.ERROR
+            assert issues[index].type == "DB"
+            assert issues[index].id == f"{region}/{db_id}"
+        assert_dict_equals(resp, {"aws": {"databases": local_databases}})
 
     def test_cfg_gather_user_config(self):
+        # Given:
         model = initial_model()
         model.aws["databases"] = Prodict.from_dict({
-            "blackwells": {
+            f"{AWS_REGION_US}/borders": {
+                "status": "ACCESSIBLE",
+                "db_name": "db_borders",
+                "master_password": "ssm:borders.master_password",
+            },
+            f"{AWS_REGION_UK}/blackwells": {
                 "status": "ACCESSIBLE",
                 "db_name": "db_blackwells",
                 "master_password": "ssm:blackwells.master_password",
             },
-            "foyles": {
+            f"{AWS_REGION_UK}/foyles": {
                 "status": "DISABLED",
             },
-            "blackwells-recover": {
+            f"{AWS_REGION_UK}/blackwells-recover": {
                 "status": "ABSENT",
             },
-            "whsmith": {
+            f"{AWS_REGION_UK}/whsmith": {
                 "status": "ENABLED",
-                "db_name": "qa_results",
+                "db_name": "db_whsmith",
                 "master_password": "ssm:whsmith.master_password",
             },
         })
         tz = pytz.timezone("Europe/Dublin")
         time_ref = datetime(2020, 5, 15, 22, 24, 51, tzinfo=tz)
         user_config = UserConfigGatherer("tests/data/users.yaml", time_ref)
+
+        # When:
         resp, issues = user_config.gather_user_config(model)
+
+        # Then:
         assert_dict_equals(resp, {
             "job": {
                 # 2020-05-26 10:22:00 +01
@@ -241,15 +291,78 @@ class TestGatherers:
             },
             "aws": {
                 "databases": {
-                    "blackwells": {
+                    f"{AWS_REGION_US}/borders": {
                         "permissions": {
-                            "leroy.trent@acme.com": "crud",
+                            "leroy.trent@acme.com": "query",
+                        },
+                    },
+                    f"{AWS_REGION_UK}/blackwells": {
+                        "permissions": {
+                            "leroy.trent@acme.com": "query",
                             "valerie.tennant@acme.com": "crud",
                         },
                     },
-                    "whsmith": {
+                    f"{AWS_REGION_UK}/whsmith": {
+                        "permissions": {
+                            "leroy.trent@acme.com": "crud",
+                        },
+                    },
+                },
+            },
+        })
+
+    def test_cfg_gather_user_config_single_region(self):
+        # Given:
+        model = initial_model()
+        model.aws["single_region"] = AWS_REGION_UK
+        model.aws["databases"] = Prodict.from_dict({
+            f"{AWS_REGION_UK}/blackwells": {
+                "status": "ACCESSIBLE",
+                "db_name": "db_blackwells",
+                "master_password": "ssm:blackwells.master_password",
+            },
+            f"{AWS_REGION_UK}/whsmith": {
+                "status": "ENABLED",
+                "db_name": "db_whsmith",
+                "master_password": "ssm:whsmith.master_password",
+            },
+        })
+        user_config = UserConfigGatherer(StringIO(f"""
+- login: leroy.trent@acme.com
+  default_grant_type: query
+  permissions:
+    - db: "*"
+    - db: "whsmith"
+      grant_type: crud
+        """))
+
+        # When:
+        resp, issues = user_config.gather_user_config(model)
+
+        # Then:
+        assert not issues
+        assert_dict_equals(resp, {
+            "okta": {
+                "users": {
+                    "leroy.trent@acme.com": {
+                        "db_username": "leroy.trent@acme.com",
+                        "permissions": {
+                            f"{AWS_REGION_UK}/blackwells": "query",
+                            f"{AWS_REGION_UK}/whsmith": "crud",
+                        },
+                    },
+                },
+            },
+            "aws": {
+                "databases": {
+                    f"{AWS_REGION_UK}/blackwells": {
                         "permissions": {
                             "leroy.trent@acme.com": "query",
+                        },
+                    },
+                    f"{AWS_REGION_UK}/whsmith": {
+                        "permissions": {
+                            "leroy.trent@acme.com": "crud",
                         },
                     },
                 },
@@ -269,10 +382,10 @@ class TestGatherers:
         assert len(issues) == 2
         assert issues[0].level == IssueLevel.ERROR
         assert issues[0].type == "GLUE"
-        assert issues[0].id == "whsmith"
+        assert issues[0].id == f"{AWS_REGION_UK}/whsmith"
         assert issues[1].level == IssueLevel.ERROR
         assert issues[1].type == "GLUE"
-        assert issues[1].id == "foyles"
+        assert issues[1].id == f"{AWS_REGION_UK}/foyles"
 
         assert_dict_equals(resp, {"aws": SERVICES_CONFIG})
 
@@ -361,3 +474,24 @@ class TestGatherers:
                 "status": "ABSENT",
             }
         }}})
+
+
+def _create_subnets(name: str,
+                    region: str,
+                    vpc_cidr: str,
+                    subnet_defs: List[Tuple[str, str]]):
+    ec2 = boto3.client("ec2", region_name=region)
+    vpc = ec2.create_vpc(CidrBlock=vpc_cidr)["Vpc"]
+    # to force a deterministic sequence of pseudo random numbers
+    random.seed(1)
+    subnet_ids = [ec2.create_subnet(VpcId=vpc["VpcId"],
+                                    CidrBlock=cidr,
+                                    AvailabilityZone=f"{region}{az_id}")["Subnet"]["SubnetId"]
+                  for az_id, cidr in subnet_defs]
+
+    rds = boto3.client("rds", region_name=region)
+    rds.create_db_subnet_group(
+        DBSubnetGroupName=name,
+        DBSubnetGroupDescription="my db subnet",
+        SubnetIds=subnet_ids,
+    )

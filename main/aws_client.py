@@ -7,9 +7,13 @@ from configobj import ConfigObj
 
 
 class AwsClient:
-    def __init__(self, aws_region: str):
+    def __init__(self, aws_region: str = None):
         self._session = boto3.session.Session(region_name=aws_region)
         self._clients = {}
+
+    @property
+    def region(self):
+        return self._session.region_name
 
     def get_account_id(self) -> str:
         """

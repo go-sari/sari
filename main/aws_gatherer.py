@@ -25,17 +25,18 @@ class AwsGatherer:
         issues = []
         configured_databases = model.aws.databases
         not_found = dict(status=DbStatus.ABSENT.name)
-        updates = {db_id: not_found for db_id in configured_databases}
+        updates = {db_uid: not_found for db_uid in configured_databases
+                   if db_uid.startswith(f"{self.aws.region}/")}
         for db in self.aws.rds_enum_databases(ENGINE_TYPE):
-            db_id = db["DBInstanceIdentifier"]
-            if db_id in configured_databases:
-                if DbStatus[configured_databases[db_id].status] == DbStatus.ENABLED:
+            db_uid = f"{self.aws.region}/{db['DBInstanceIdentifier']}"
+            if db_uid in configured_databases:
+                if DbStatus[configured_databases[db_uid].status] == DbStatus.ENABLED:
                     subnets_by_az = _get_subnets_by_az(db)
                     az = db.get("AvailabilityZone",
                                 # Chose the AZ of the first subnet arbitrarily.
                                 # Required for MOTO since AZ is not defined.
                                 next(iter(subnets_by_az.keys())))
-                    updates[db_id] = {
+                    updates[db_uid] = {
                         "db_name": db["DBName"],
                         "master_username": db["MasterUsername"],
                         "endpoint": {
@@ -49,13 +50,13 @@ class AwsGatherer:
                         "primary_subnet": subnets_by_az[az][0]
                     }
                 else:
-                    del updates[db_id]
+                    del updates[db_uid]
             else:
-                issues.append(Issue(level=IssueLevel.WARNING, type="DB", id=db_id,
+                issues.append(Issue(level=IssueLevel.WARNING, type="DB", id=db_uid,
                                     message="Present in AWS but NOT configured"))
-        for db_id, db in updates.items():
+        for db_uid, db in updates.items():
             if db == not_found:
-                issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
+                issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
                                     message="Not found in AWS"))
         return Prodict(aws={"databases": updates}), issues
 

@@ -1,7 +1,9 @@
+import glob
 import os
 
 import yaml
 from prodict import Prodict
+from typing import List
 
 
 def load_config() -> Prodict:
@@ -9,13 +11,16 @@ def load_config() -> Prodict:
     with open(f"{config_dir}/config.yaml") as file:
         config = yaml.safe_load(file)
 
+    regions = _discover_regions(config_dir)
     config.update({
         "system": {
             "config_dir": config_dir,
             "proxy": (os.environ.get("PROXY"))
         },
         "aws": {
-            "region": os.environ["AWS_REGION"]
+            "regions": regions,
+            "single_region": regions[0] if len(regions) == 1 else None,
+            "default_region": os.environ["AWS_REGION"],
         },
         "okta": {
             "organization": os.environ["OKTA_ORG_NAME"],
@@ -36,3 +41,11 @@ def load_config() -> Prodict:
         }
     })
     return Prodict.from_dict(config)
+
+
+def _discover_regions(basedir: str) -> List[str]:
+    regions = []
+    for entry in glob.glob(f"{basedir}/*/databases.yaml"):
+        *_, region, _ = entry.split("/")
+        regions.append(region)
+    return regions

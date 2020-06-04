@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timedelta
 from distutils.util import strtobool
+from io import StringIO
 from typing import Dict, List, Optional, Tuple, Union
 
 import pytz
@@ -19,13 +20,13 @@ DEFAULT_GRANT_TYPE = 'query'
 
 
 class UserConfigGatherer:
-    def __init__(self, cfg_filename: str, time_ref: datetime = None):
+    def __init__(self, cfg_stream: Union[str, StringIO], time_ref: datetime = None):
         """
-        :param cfg_filename: Path of Yaml file containing users definition.
+        :param cfg_stream: Path of Yaml file containing users definition.
 
         :param time_ref: (Aware) datetime to evaluate validity times.
         """
-        self.cfg_filename = cfg_filename
+        self.cfg_stream = cfg_stream
         if not time_ref:
             time_ref = datetime.now(pytz.utc)
         else:
@@ -36,9 +37,9 @@ class UserConfigGatherer:
     def gather_user_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         self._next_transition = model.job.next_transition
         issues = []
-        with open(self.cfg_filename) as file:
-            users_list: List[dict] = yaml.safe_load(file)
-        enabled_databases = [db_id for db_id, db in model.aws.databases.items()
+        with _open(self.cfg_stream) as stream:
+            users_list: List[dict] = yaml.safe_load(stream)
+        enabled_databases = [db_uid for db_uid, db in model.aws.databases.items()
                              if DbStatus[db.status] >= DbStatus.ENABLED]
         users = {}
         databases = {}
@@ -48,14 +49,15 @@ class UserConfigGatherer:
             try:
                 permissions = self._parse_permissions(
                     user.get("permissions", []),
+                    model.aws.single_region,
                     default_grant_type,
                     enabled_databases)
                 users[login] = {
                     "db_username": login[:MAX_DB_USERNAME_LENGTH],
                     "permissions": permissions
                 }
-                for db_id, grant_type in permissions.items():
-                    databases.setdefault(db_id, {"permissions": {}})["permissions"][login] = grant_type
+                for db_uid, grant_type in permissions.items():
+                    databases.setdefault(db_uid, {"permissions": {}})["permissions"][login] = grant_type
             except ValueError as e:
                 issues.append(Issue(level=IssueLevel.ERROR, type='USER', id=login, message=str(e)))
         updates = Prodict(okta={"users": users}, aws={"databases": databases})
@@ -64,11 +66,14 @@ class UserConfigGatherer:
         return updates, issues
 
     def _parse_permissions(self, perm_list: List[dict],
+                           default_region: str,
                            default_grant_type: str,
                            db_ids: List[str]) -> Dict[str, str]:
         permissions: Dict[str, str] = {}
         for perm in perm_list:
             db_ref = perm['db']
+            if "/" not in db_ref and default_region:
+                db_ref = f"{default_region}/{db_ref}"
             db_id_list = wc_expand(db_ref, db_ids)
             if not db_id_list:
                 raise ValueError(f"Not existing and enabled DB instance reference '{db_ref}'")
@@ -87,8 +92,8 @@ class UserConfigGatherer:
                     else:
                         self._set_next_transition(not_valid_after)
             if grant_type != "none":
-                for db_id in db_id_list:
-                    permissions[db_id] = grant_type
+                for db_uid in db_id_list:
+                    permissions[db_uid] = grant_type
         return permissions
 
     def _set_next_transition(self, dt: datetime):
@@ -97,10 +102,11 @@ class UserConfigGatherer:
 
 
 class DatabaseConfigGatherer:
-    def __init__(self, master_password_defaults: Dict[str, str], cfg_filename: str, aws: AwsClient):
+    def __init__(self, region: str, master_password_defaults: Dict[str, str], cfg_filename: str, aws: AwsClient):
         """
         :param cfg_filename: Path of Yaml file containing users definition.
         """
+        self.region = region
         self.master_password_defaults = master_password_defaults
         self.cfg_filename = cfg_filename
         self.aws = aws
@@ -114,6 +120,7 @@ class DatabaseConfigGatherer:
         databases = {}
         for cfg_db in rds_list:
             db_id = cfg_db["id"]
+            db_uid = f"{self.region}/{db_id}"
             enabled = _to_bool(cfg_db.setdefault("enabled", True))
             if enabled:
                 db = {
@@ -126,16 +133,16 @@ class DatabaseConfigGatherer:
                         db.update(self._expand_password(master_password))
                     except Exception as e:
                         # TODO: test this case
-                        issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
+                        issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
                                             message=f"Unable to expand master_password: {e}"))
                         continue
                 else:
-                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
+                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
                                         message="Undefined master_password"))
                     continue
             else:
                 db = dict(status=DbStatus.DISABLED.name)
-            databases[db_id] = db
+            databases[db_uid] = db
         return Prodict(aws={"databases": databases}), issues
 
     def _expand_password(self, master_password):
@@ -179,7 +186,7 @@ class ServiceConfigGatherer:
         updates = {}
         with open(self.cfg_filename) as file:
             services = yaml.safe_load(file)
-        enabled_databases = [db_id for db_id, db in model.aws.databases.items()
+        enabled_databases = [db_uid for db_uid, db in model.aws.databases.items()
                              if DbStatus[db.status] >= DbStatus.ENABLED]
         for conn in services.get("glue_connections", []):
             db_ref = conn['db']
@@ -190,9 +197,9 @@ class ServiceConfigGatherer:
                 continue
             pcr = conn.get("physical_connection_requirements", {})
             grant_type = conn.get("grant_type", DEFAULT_GRANT_TYPE)
-            for db_id in db_id_list:
-                db = model.aws.databases[db_id]
-                updates[db_id] = {
+            for db_uid in db_id_list:
+                db = model.aws.databases[db_uid]
+                updates[db_uid] = {
                     "grant_type": grant_type,
                     "physical_connection_requirements": {
                         "availability_zone": pcr.get("availability_zone", db.availability_zone),
@@ -201,6 +208,12 @@ class ServiceConfigGatherer:
                     },
                 }
         return Prodict(aws={"glue_connections": updates}), issues
+
+
+def _open(stream):
+    if isinstance(stream, str):
+        return open(stream, "r")
+    return stream
 
 
 def _to_bool(val) -> bool:

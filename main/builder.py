@@ -18,16 +18,15 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
     config_dir = config.system.config_dir
     executor = ThreadPoolExecutor()
 
-    aws = AwsClient(model.aws.region)
-
     gatherers: List[Callable[[Prodict], Tuple[Prodict, List[Issue]]]] = []
 
-    aws_gatherer = AwsGatherer(aws)
-    gatherers.append(aws_gatherer.gather_general_info)
+    gatherers.append(AwsGatherer(AwsClient()).gather_general_info)
 
-    gatherers.append(DatabaseConfigGatherer(config.master_password_defaults,
-                                            f"{config_dir}/{model.aws.region}/databases.yaml", aws).gather_rds_config)
-    gatherers.append(aws_gatherer.gather_rds_info)
+    for region in config.aws.regions:
+        aws = AwsClient(region)
+        gatherers.append(DatabaseConfigGatherer(region, config.master_password_defaults,
+                                                f"{config_dir}/{region}/databases.yaml", aws).gather_rds_config)
+        gatherers.append(AwsGatherer(aws).gather_rds_info)
 
     gatherers.append(MySqlGatherer(executor, config.system.proxy).gather_rds_status)
 

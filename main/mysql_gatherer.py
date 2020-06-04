@@ -35,7 +35,7 @@ class MySqlGatherer:
 
         issues = []
         futures = []
-        for db_id, db in databases.items():
+        for db_uid, db in databases.items():
             if db.endpoint:
                 future = self.executor.submit(_check_mysql_instance, db)
             else:
@@ -44,20 +44,20 @@ class MySqlGatherer:
         db_id_max_len = max(map(len, databases))
         updates = {}
         accessible = dict(status=DbStatus.ACCESSIBLE.name)
-        for db_id, future in zip(databases, futures):
+        for db_uid, future in zip(databases, futures):
             if future:
                 success, message = future.result(MYSQL_LOGIN_TIMEOUT)
                 color = ("red", "green")[success]
                 if success:
-                    updates[db_id] = accessible
+                    updates[db_uid] = accessible
                 else:
-                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_id,
+                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
                                         message=message))
             else:
-                success, message = (False, databases[db_id].status)
+                success, message = (False, databases[db_uid].status)
                 color = "light-magenta"
-            leader = "." * (2 + db_id_max_len - len(db_id))
-            logger.opt(colors=True).info(f"  {db_id} {leader} <{color}>{message}</{color}>")
+            leader = "." * (2 + db_id_max_len - len(db_uid))
+            logger.opt(colors=True).info(f"  {db_uid} {leader} <{color}>{message}</{color}>")
         return Prodict(aws={"databases": updates}), issues
 
 

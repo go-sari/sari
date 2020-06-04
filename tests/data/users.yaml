@@ -2,7 +2,7 @@
   default_grant_type: query
   permissions:
     - db: "*"
-    - db: "blackwells"
+    - db: "eu-west-2/whsmith"
       grant_type: crud
       not_valid_after: 2020-05-26 10:22:00 +01
 
@@ -10,5 +10,5 @@
 
 - login: valerie.tennant@acme.com
   permissions:
-    - db: blackwells
+    - db: "eu-west-2/blackwells"
       grant_type: crud
