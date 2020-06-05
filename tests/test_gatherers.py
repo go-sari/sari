@@ -19,11 +19,9 @@ from moto.iam.models import ACCOUNT_ID
 from prodict import Prodict
 
 from main.aws_client import AwsClient
-from main.aws_gatherer import AwsGatherer
-from main.cfg_gatherer import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer
 from main.dict import dict_deep_merge
+from main.gatherer import *
 from main.issue import IssueLevel
-from main.okta_gatherer import OktaGatherer
 from main.password_resolver import MasterPasswordResolver
 
 AWS_REGION_US = "us-east-1"
@@ -162,7 +160,7 @@ class TestGatherers:
         aws_gatherer = AwsGatherer(AwsClient(AWS_REGIONS[0]))
 
         # When:
-        resp, issues = aws_gatherer.gather_general_info(initial_model())
+        resp, issues = aws_gatherer.gather(initial_model())
 
         # Then:
         assert_dict_equals(resp, {"aws": {"account": str(ACCOUNT_ID)}})
@@ -190,7 +188,7 @@ class TestGatherers:
         # When:
         resp, issues = DatabaseConfigGatherer(region,
                                               f"tests/data/{region}/databases.yaml",
-                                              pwd_resolver).gather_rds_config(initial_model())
+                                              pwd_resolver).gather(initial_model())
 
         # Then:
         assert len(issues) == len(cfg_error_instances)
@@ -227,13 +225,14 @@ class TestGatherers:
                 VpcSecurityGroupIds=[random_security_group_id()],
                 DBSubnetGroupName="db_subnet",
             )
-        aws_gatherer = AwsGatherer(AwsClient(region))
+        aws = AwsClient(region)
+        gatherer = DatabaseInfoGatherer(aws, MasterPasswordResolver(aws, MASTER_PASSWORD_DEFAULTS))
         model = initial_model()
         model.aws["databases"] = Prodict.from_dict(RDS_CONFIG_DATABASES)
         local_databases = {k: v for k, v in RDS_INFO_DATABASES.items() if k.startswith(f"{region}/")}
 
         # When:
-        resp, issues = aws_gatherer.gather_rds_info(model)
+        resp, issues = gatherer.gather(model)
 
         # Then:
         assert len(issues) == 1 + len(absent_instances)
@@ -277,7 +276,7 @@ class TestGatherers:
         user_config = UserConfigGatherer("tests/data/users.yaml", time_ref)
 
         # When:
-        resp, issues = user_config.gather_user_config(model)
+        resp, issues = user_config.gather(model)
 
         # Then:
         assert_dict_equals(resp, {
@@ -336,7 +335,7 @@ class TestGatherers:
         """))
 
         # When:
-        resp, issues = user_config.gather_user_config(model)
+        resp, issues = user_config.gather(model)
 
         # Then:
         assert not issues
@@ -375,7 +374,7 @@ class TestGatherers:
         svc_config = ServiceConfigGatherer("tests/data/services.yaml")
 
         # When:
-        resp, issues = svc_config.gather_service_config(model)
+        resp, issues = svc_config.gather(model)
 
         # Then:
         assert len(issues) == 2
@@ -434,7 +433,7 @@ class TestGatherers:
         with ThreadPoolExecutor(max_workers=1) as executor:
             okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
             with HTTMock(okta_user_info, okta_app_users):
-                resp, issues = okta_gatherer.gather_user_info(model)
+                resp, issues = okta_gatherer.gather(model)
         assert len(issues) == 3
         assert issues[0].level == IssueLevel.ERROR
         assert issues[0].type == "USER"

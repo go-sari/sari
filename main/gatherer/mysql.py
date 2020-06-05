@@ -9,18 +9,21 @@ import socks
 from loguru import logger
 from prodict import Prodict
 
-from main.constants import MYSQL_LOGIN_TIMEOUT, MYSQL_CONNECT_TIMEOUT
 from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
+from .gatherer import Gatherer
+
+MYSQL_CONNECT_TIMEOUT = 4
+MYSQL_LOGIN_TIMEOUT = 10
 
 
-class MySqlGatherer:
+class MySqlGatherer(Gatherer):
 
     def __init__(self, executor: ThreadPoolExecutor, proxy: Optional[str]):
         self.executor = executor
         self.proxy = proxy
 
-    def gather_rds_status(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         with _ProxyContext(self.proxy):
             return self._gather_rds_status(model)
 

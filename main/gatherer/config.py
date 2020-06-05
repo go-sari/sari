@@ -11,13 +11,14 @@ from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
 from main.misc import wc_expand
 from main.password_resolver import MasterPasswordResolver
+from .gatherer import Gatherer
 
 # Limited by MySQL. See https://dev.mysql.com/doc/refman/5.7/en/user-names.html
 MAX_DB_USERNAME_LENGTH = 32
 DEFAULT_GRANT_TYPE = 'query'
 
 
-class UserConfigGatherer:
+class UserConfigGatherer(Gatherer):
     def __init__(self, cfg_stream: Union[str, StringIO], time_ref: datetime = None):
         """
         :param cfg_stream: Path of Yaml file containing users definition.
@@ -32,7 +33,7 @@ class UserConfigGatherer:
         self.time_ref = time_ref
         self._next_transition = None
 
-    def gather_user_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         self._next_transition = model.job.next_transition
         issues = []
         with _open(self.cfg_stream) as stream:
@@ -99,7 +100,7 @@ class UserConfigGatherer:
             self._next_transition = dt
 
 
-class DatabaseConfigGatherer:
+class DatabaseConfigGatherer(Gatherer):
     def __init__(self, region: str, cfg_filename: str, pwd_resolver: MasterPasswordResolver):
         """
         :param region: AWS region name.
@@ -110,7 +111,7 @@ class DatabaseConfigGatherer:
         self.pwd_resolver = pwd_resolver
 
     # noinspection PyUnusedLocal
-    def gather_rds_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         # pylint: disable=W0613
         with open(self.cfg_filename) as file:
             rds_list: List[dict] = yaml.safe_load(file)
@@ -121,16 +122,14 @@ class DatabaseConfigGatherer:
             db_uid = f"{self.region}/{db_id}"
             enabled = _to_bool(cfg_db.setdefault("enabled", True))
             if enabled:
-                db = {
-                    "status": DbStatus.ENABLED.name,
-                    "permissions": {},
-                }
                 try:
                     master_password, password_age = self.pwd_resolver.resolve(db_id, cfg_db.get("master_password"))
-                    db.update({
+                    db = {
+                        "status": DbStatus.ENABLED.name,
+                        "permissions": {},
                         "master_password": master_password,
                         "password_age": password_age,
-                    })
+                    }
                 except Exception as e:
                     issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid, message=str(e)))
                     continue
@@ -140,11 +139,11 @@ class DatabaseConfigGatherer:
         return Prodict(aws={"databases": databases}), issues
 
 
-class ServiceConfigGatherer:
+class ServiceConfigGatherer(Gatherer):
     def __init__(self, cfg_filename: str):
         self.cfg_filename = cfg_filename
 
-    def gather_service_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         issues = []
         updates = {}
         with open(self.cfg_filename) as file:

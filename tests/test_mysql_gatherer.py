@@ -4,7 +4,7 @@ import pytest
 from prodict import Prodict
 from testcontainers.mysql import MySqlContainer
 
-from main.mysql_gatherer import MySqlGatherer
+from main.gatherer import MySqlGatherer
 from tests.test_gatherers import assert_dict_equals
 
 
@@ -39,6 +39,6 @@ def test_mysql_gather_rds_status():
                     }
                 }
             })
-            updates, issues = mysql_gatherer.gather_rds_status(model)
+            updates, issues = mysql_gatherer.gather(model)
     assert not issues
     assert_dict_equals(updates, {"aws": {"databases": {"blackwells": {"status": "ACCESSIBLE"}}}})

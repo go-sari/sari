@@ -9,9 +9,10 @@ from prodict import Prodict
 
 from main.issue import Issue, IssueLevel
 from main.rest import async_retryable_session
+from .gatherer import Gatherer
 
 
-class OktaGatherer:
+class OktaGatherer(Gatherer):
 
     def __init__(self, api_token, executor: ThreadPoolExecutor):
         """
@@ -20,7 +21,7 @@ class OktaGatherer:
         self.api_token = api_token
         self.executor = executor
 
-    def gather_user_info(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
         """
         Check if the users exist and retrieve their corresponding user_id and ssh_pubkey.
         """
