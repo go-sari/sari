@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import lru_cache
 from typing import List, Tuple
 
 import boto3
@@ -19,28 +20,30 @@ class AwsClient:
         """
         Get the AWS account number.
         """
-        sts = self._get_session('sts')
+        sts = self._get_client('sts')
         return sts.get_caller_identity()['Account']
 
     def rds_enum_databases(self, engine_type: str) -> List[dict]:
-        rds = self._get_session('rds')
-        databases = rds.describe_db_instances()['DBInstances']
-        return [db for db in databases if db["Engine"] == engine_type]
+        rds = self._get_client("rds")
+        paginator = rds.get_paginator("describe_db_instances")
+        databases = []
+        for page in paginator.paginate(PaginationConfig={"MaxItems": 1000}):
+            databases.extend(db for db in page["DBInstances"] if db["Engine"] == engine_type)
+        return databases
 
     def ssm_get_encrypted_parameter(self, name) -> Tuple[str, datetime]:
-        ssm = self._get_session('ssm')
+        ssm = self._get_client('ssm')
         parameter = ssm.get_parameter(Name=name, WithDecryption=True)['Parameter']
         return parameter['Value'], parameter.get('LastModifiedDate', None)
 
     def s3_get_property(self, bucket_name, key, property_name) -> Tuple[str, datetime]:
-        s3 = self._get_session('s3')
+        s3 = self._get_client('s3')
         s3_object = s3.get_object(Bucket=bucket_name, Key=key)
         body = s3_object['Body'].read().decode("utf-8")
         last_modified = s3_object['LastModified']
         properties = ConfigObj(body.splitlines())
         return properties[property_name], last_modified
 
-    def _get_session(self, service_name) -> BaseClient:
-        if service_name not in self._clients:
-            self._clients[service_name] = self._session.client(service_name)
-        return self._clients[service_name]
+    @lru_cache(maxsize=None)
+    def _get_client(self, service_name) -> BaseClient:
+        return self._session.client(service_name)
