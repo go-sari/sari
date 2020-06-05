@@ -250,7 +250,7 @@ class Synthesizer:
                                       endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
                                       proxy=self.config.system.proxy,
                                       username=db.master_username,
-                                      password=pulumi.Output.secret(db.plain_master_password))
+                                      password=pulumi.Output.secret(db.master_password))
             self._mysql_providers[db_uid] = provider
         return provider
 

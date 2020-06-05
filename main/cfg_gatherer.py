@@ -1,5 +1,4 @@
-import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from distutils.util import strtobool
 from io import StringIO
 from typing import Dict, List, Optional, Tuple, Union
@@ -7,12 +6,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import pytz
 import yaml
 from prodict import Prodict
-from time import time
 
-from main.aws_client import AwsClient
 from main.dbstatus import DbStatus
 from main.issue import Issue, IssueLevel
 from main.misc import wc_expand
+from main.password_resolver import MasterPasswordResolver
 
 # Limited by MySQL. See https://dev.mysql.com/doc/refman/5.7/en/user-names.html
 MAX_DB_USERNAME_LENGTH = 32
@@ -102,14 +100,14 @@ class UserConfigGatherer:
 
 
 class DatabaseConfigGatherer:
-    def __init__(self, region: str, master_password_defaults: Dict[str, str], cfg_filename: str, aws: AwsClient):
+    def __init__(self, region: str, cfg_filename: str, pwd_resolver: MasterPasswordResolver):
         """
+        :param region: AWS region name.
         :param cfg_filename: Path of Yaml file containing users definition.
         """
         self.region = region
-        self.master_password_defaults = master_password_defaults
         self.cfg_filename = cfg_filename
-        self.aws = aws
+        self.pwd_resolver = pwd_resolver
 
     # noinspection PyUnusedLocal
     def gather_rds_config(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
@@ -127,54 +125,19 @@ class DatabaseConfigGatherer:
                     "status": DbStatus.ENABLED.name,
                     "permissions": {},
                 }
-                master_password = cfg_db.get("master_password", self._infer_master_password(db_id))
-                if master_password:
-                    try:
-                        db.update(self._expand_password(master_password))
-                    except Exception as e:
-                        # TODO: test this case
-                        issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
-                                            message=f"Unable to expand master_password: {e}"))
-                        continue
-                else:
-                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid,
-                                        message="Undefined master_password"))
+                try:
+                    master_password, password_age = self.pwd_resolver.resolve(db_id, cfg_db.get("master_password"))
+                    db.update({
+                        "master_password": master_password,
+                        "password_age": password_age,
+                    })
+                except Exception as e:
+                    issues.append(Issue(level=IssueLevel.ERROR, type="DB", id=db_uid, message=str(e)))
                     continue
             else:
                 db = dict(status=DbStatus.DISABLED.name)
             databases[db_uid] = db
         return Prodict(aws={"databases": databases}), issues
-
-    def _expand_password(self, master_password):
-        ssm_master_password = False
-        pwd_last_modified = None
-        if master_password.startswith('ssm:'):
-            ssm_master_password = master_password[4:]
-            master_password, pwd_last_modified = self.aws.ssm_get_encrypted_parameter(ssm_master_password) \
-                if ssm_master_password else (False, False)
-        elif master_password.startswith('s3-prop:'):
-            s3_path = master_password[8:]
-            match = re.match(r"([^\s/]+)/(\S+)\[(\S+)\]", s3_path)
-            if not match:
-                raise ValueError(f"Invalid s3-prop reference: {s3_path}")
-            bucket_name, key, property_name = match.groups()
-            master_password, pwd_last_modified = self.aws.s3_get_property(bucket_name, key, property_name)
-        if isinstance(pwd_last_modified, datetime):
-            password_age = timedelta(seconds=(time() - pwd_last_modified.timestamp())).days
-        else:
-            password_age = False
-        return {
-            'plain_master_password': master_password,
-            'ssm_master_password': ssm_master_password,
-            'password_age': password_age,
-        }
-
-    def _infer_master_password(self, db_id: str):
-        for pattern, template in self.master_password_defaults.items():
-            match = re.match(pattern, db_id)
-            if match:
-                return match.expand(template)
-        return None
 
 
 class ServiceConfigGatherer:

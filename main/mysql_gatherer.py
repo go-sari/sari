@@ -75,7 +75,7 @@ def _check_mysql_instance(db) -> Tuple[bool, str]:
                                              ssl_disabled=True,
                                              database="mysql",
                                              user=db.master_username,
-                                             password=db.plain_master_password,
+                                             password=db.master_password,
                                              connection_timeout=MYSQL_CONNECT_TIMEOUT,
                                              # Only Pure Python connector implementation supports SOCKS5
                                              use_pure=True)

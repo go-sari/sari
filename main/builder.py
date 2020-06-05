@@ -11,6 +11,7 @@ from main.dict import dict_deep_merge
 from main.issue import Issue
 from main.mysql_gatherer import MySqlGatherer
 from main.okta_gatherer import OktaGatherer
+from main.password_resolver import MasterPasswordResolver
 
 
 def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
@@ -24,8 +25,11 @@ def build_model(config: Prodict) -> Tuple[Prodict, List[Issue]]:
 
     for region in config.aws.regions:
         aws = AwsClient(region)
-        gatherers.append(DatabaseConfigGatherer(region, config.master_password_defaults,
-                                                f"{config_dir}/{region}/databases.yaml", aws).gather_rds_config)
+        pwd_resolver = MasterPasswordResolver(aws, config.master_password_defaults)
+        gatherers.append(
+            DatabaseConfigGatherer(region,
+                                   f"{config_dir}/{region}/databases.yaml",
+                                   pwd_resolver).gather_rds_config)
         gatherers.append(AwsGatherer(aws).gather_rds_info)
 
     gatherers.append(MySqlGatherer(executor, config.system.proxy).gather_rds_status)

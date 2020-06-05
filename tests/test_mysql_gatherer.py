@@ -35,7 +35,7 @@ def test_mysql_gather_rds_status():
                             "port": mysql.get_exposed_port(3306),
                         },
                         "master_username": username,
-                        "plain_master_password": password,
+                        "master_password": password,
                     }
                 }
             })

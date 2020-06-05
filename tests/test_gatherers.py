@@ -24,6 +24,7 @@ from main.cfg_gatherer import DatabaseConfigGatherer, UserConfigGatherer, Servic
 from main.dict import dict_deep_merge
 from main.issue import IssueLevel
 from main.okta_gatherer import OktaGatherer
+from main.password_resolver import MasterPasswordResolver
 
 AWS_REGION_US = "us-east-1"
 AWS_REGION_UK = "eu-west-2"
@@ -37,15 +38,13 @@ MOTO_RDS_FIXED_RESOURCE_ID = "db-M5ENSHXFPU6XHZ4G4ZEI5QIO2U"
 RDS_CONFIG_DATABASES = {
     f"{AWS_REGION_US}/borders": {
         "status": "ENABLED",
-        "ssm_master_password": "borders.master_password",
-        "plain_master_password": "vigilant_swirles",
+        "master_password": "vigilant_swirles",
         "password_age": False,
         "permissions": {},
     },
     f"{AWS_REGION_UK}/blackwells": {
         "status": "ENABLED",
-        "ssm_master_password": "blackwells.master_password",
-        "plain_master_password": "focused_mendel",
+        "master_password": "focused_mendel",
         "password_age": False,
         "permissions": {},
     },
@@ -54,8 +53,7 @@ RDS_CONFIG_DATABASES = {
     },
     f"{AWS_REGION_UK}/whsmith": {
         "status": "ENABLED",
-        "ssm_master_password": "whsmith.master_password",
-        "plain_master_password": "quirky_ganguly",
+        "master_password": "quirky_ganguly",
         "password_age": False,
         "permissions": {},
     },
@@ -182,16 +180,17 @@ class TestGatherers:
         for db_id in okay_instances:
             ssm.put_parameter(
                 Name=f"{db_id}.master_password",
-                Value=RDS_CONFIG_DATABASES[f"{region}/{db_id}"]["plain_master_password"],
+                Value=RDS_CONFIG_DATABASES[f"{region}/{db_id}"]["master_password"],
                 Type="SecureString"
             )
         aws_client = AwsClient(region)
         local_databases = {k: v for k, v in RDS_CONFIG_DATABASES.items() if k.startswith(f"{region}/")}
+        pwd_resolver = MasterPasswordResolver(aws_client, MASTER_PASSWORD_DEFAULTS)
 
         # When:
-        resp, issues = DatabaseConfigGatherer(region, MASTER_PASSWORD_DEFAULTS,
+        resp, issues = DatabaseConfigGatherer(region,
                                               f"tests/data/{region}/databases.yaml",
-                                              aws_client).gather_rds_config(initial_model())
+                                              pwd_resolver).gather_rds_config(initial_model())
 
         # Then:
         assert len(issues) == len(cfg_error_instances)
