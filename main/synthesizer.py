@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import List
 
@@ -31,9 +32,6 @@ class Synthesizer:
     def __init__(self, config: Prodict, model: Prodict):
         self.config = config
         self.model = model
-        self.default_provider = pulumi_aws.Provider("default")
-        self.aws_providers = {region: pulumi_aws.Provider(region, region=region) for region in model.aws.regions}
-        self._mysql_providers = {}
         self.standard_tags = {
             "Provisioning": "SARI",
             "sari:configuration": _get_sari_configuration_repo(),
@@ -54,17 +52,18 @@ class Synthesizer:
             return
         aws = self.model.aws
         rule_name = "build-sari-start"
+        aws_provider = self._get_aws_provider(self.model.aws.default_region)
         cloudwatch.EventRule(rule_name,
                              name=rule_name,
                              tags=self.standard_tags,
-                             description="Trigger SARI Build for Next Transition",
+                             description="Triggers SARI Build at the instant of the Next Transition",
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
-                             opts=pulumi.ResourceOptions(provider=self.default_provider))
+                             opts=pulumi.ResourceOptions(provider=aws_provider))
         cloudwatch.EventTarget(rule_name,
                                arn=f"arn:aws:codebuild:{aws.default_region}:{aws.account}:project/build-sari",
                                role_arn=f"arn:aws:iam::{aws.account}:role/service-role/build-sari-start",
                                rule=rule_name,
-                               opts=pulumi.ResourceOptions(provider=self.default_provider))
+                               opts=pulumi.ResourceOptions(provider=aws_provider))
 
     def synthesize_iam(self):
         aws = self.model.aws
@@ -82,12 +81,13 @@ class Synthesizer:
                 }
             }
         }])
+        aws_provider = self._get_aws_provider(self.model.aws.default_region)
         role = iam.Role("sari",
                         name=SARI_ROLE_NAME,
                         description=f"Allow access to SARI-enabled databases",
                         tags=self.standard_tags,
                         assume_role_policy=assume_role_policy,
-                        opts=pulumi.ResourceOptions(provider=self.default_provider))
+                        opts=pulumi.ResourceOptions(provider=aws_provider))
         db_policy = _aws_make_policy(
             [{
                 "Sid": "DescribeDBInstances",
@@ -105,7 +105,7 @@ class Synthesizer:
                        name=SARI_ROLE_NAME,
                        role=role.id,
                        policy=db_policy,
-                       opts=pulumi.ResourceOptions(provider=self.default_provider))
+                       opts=pulumi.ResourceOptions(provider=aws_provider))
 
     def synthesize_mysql(self):
         for login, user in self.model.okta.users.items():
@@ -115,10 +115,8 @@ class Synthesizer:
                 db = self.model.aws.databases[db_uid]
                 if DbStatus[db.status] < DbStatus.ACCESSIBLE:
                     continue
-                provider = self._get_mysql_provider(db_uid, db)
-                region, db_id = db_uid.split("/")
-                old_resource_name = f"{db_id}/{login}"
-                resource_name = f"{db_uid}/{login}"
+                provider = self._get_mysql_provider(db_uid)
+                resource_name = self._res_name(f"{db_uid}/{login}")
                 mysql_user = mysql.User(resource_name,
                                         user=login,
                                         host=ANY_HOST,
@@ -127,7 +125,6 @@ class Synthesizer:
                                         opts=pulumi.ResourceOptions(
                                             provider=provider,
                                             delete_before_replace=True,
-                                            aliases=[_pulumi_arn("mysql:index/user:User", old_resource_name)]
                                         ))
                 mysql.Grant(resource_name,
                             user=mysql_user.user,
@@ -137,7 +134,6 @@ class Synthesizer:
                             opts=pulumi.ResourceOptions(
                                 provider=provider,
                                 delete_before_replace=True,
-                                aliases=[_pulumi_arn("mysql:index/grant:Grant", old_resource_name)]
                             ))
 
     def synthesize_okta(self):
@@ -164,15 +160,13 @@ class Synthesizer:
         databases = self.model.aws.databases
         for db_uid, con in glue_connections.items():
             db = databases[db_uid]
-            region, db_id = db_uid.split("/")
-            old_resource_name = f"glue/{db_id}"
-            resource_name = f"glue/{db_uid}"
+            resource_name = self._res_name(f"glue/{db_uid}")
             password = random.RandomPassword(resource_name,
                                              length=64,
                                              special=False,
                                              opts=pulumi.ResourceOptions(additional_secret_outputs=["result"]))
             login = "glue.amazonaws.com"
-            mysql_provider = self._get_mysql_provider(db_uid, db)
+            mysql_provider = self._get_mysql_provider(db_uid)
             mysql_user = mysql.User(resource_name,
                                     user=login,
                                     host=ANY_HOST,
@@ -181,7 +175,6 @@ class Synthesizer:
                                     opts=pulumi.ResourceOptions(
                                         provider=mysql_provider,
                                         delete_before_replace=True,
-                                        aliases=[_pulumi_arn("mysql:index/user:User", old_resource_name)]
                                     ))
             mysql.Grant(resource_name,
                         user=mysql_user.user,
@@ -191,10 +184,9 @@ class Synthesizer:
                         opts=pulumi.ResourceOptions(
                             provider=mysql_provider,
                             delete_before_replace=True,
-                            aliases=[_pulumi_arn("mysql:index/grant:Grant", old_resource_name)]
                         ))
             region, db_id = db_uid.split("/")
-            aws_provider = self.aws_providers[region]
+            aws_provider = self._get_aws_provider(region)
             glue.Connection(resource_name,
                             name=f"sari.{db_id}",
                             description="Provisioned by SARI -- DO NOT EDIT",
@@ -210,7 +202,6 @@ class Synthesizer:
                             opts=pulumi.ResourceOptions(
                                 provider=aws_provider,
                                 delete_before_replace=True,
-                                aliases=[_pulumi_arn("aws:glue/connection:Connection", old_resource_name)]
                             ))
 
     def synthesize_bastion_host(self):
@@ -243,20 +234,27 @@ class Synthesizer:
         except SSHException as e:
             logger.error(f"Errors while updating Bastion Host: {e}")
 
-    def _get_mysql_provider(self, db_uid, db):
-        provider = self._mysql_providers.get(db_uid, None)
-        if not provider:
-            provider = mysql.Provider(db_uid,
-                                      endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
-                                      proxy=self.config.system.proxy,
-                                      username=db.master_username,
-                                      password=pulumi.Output.secret(db.master_password))
-            self._mysql_providers[db_uid] = provider
-        return provider
+    def _res_name(self, name: str, sep: str = "/") -> str:
+        """Get a backward compatible (but yet unique) resource name.
+        Before the Multi-Region capability the region was not included in the resource name.
+        Being backward compatible avoids hundreds of potentially dangerous Pulumi resource recreations."""
+        return name.replace(f"{self.model.aws.default_region}{sep}", "")
 
+    @lru_cache(maxsize=None)
+    def _get_aws_provider(self, region: str) -> pulumi_aws.Provider:
+        # Use "default" to name the provider for the default region to preserve backward compatibility.
+        name = region if region != self.model.aws.default_region else "default"
+        return pulumi_aws.Provider(name, region=region)
 
-def _pulumi_arn(type_: str, name: str) -> str:
-    return f"urn:pulumi:{pulumi.get_stack()}::{pulumi.get_project()}::{type_}::{name}"
+    @lru_cache(maxsize=None)
+    def _get_mysql_provider(self, db_uid):
+        """Returns a MySQL Pulumi provider specific to the database referenced by its UID."""
+        db = self.model.aws.databases[db_uid]
+        return mysql.Provider(self._res_name(db_uid),
+                              endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
+                              proxy=self.config.system.proxy,
+                              username=db.master_username,
+                              password=pulumi.Output.secret(db.master_password))
 
 
 def _get_sari_configuration_repo():
