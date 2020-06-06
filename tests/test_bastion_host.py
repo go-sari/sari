@@ -6,7 +6,7 @@ from main.bastion_host import update_authorized_keys
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(reruns=1)
+@pytest.mark.flaky(reruns=2)
 @pytest.mark.testcontainer
 def test_update_authorized_keys():
     with DockerContainer("quay.io/eliezio/sari-test-bh:v1.0.0").with_exposed_ports(SSH_PORT) as server:
