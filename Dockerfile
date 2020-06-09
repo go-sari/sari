@@ -91,6 +91,9 @@ RUN set -eux; \
         /var/cache/debconf/* \
         /var/log/dpkg.log
 
+# The default (1024) if not enough for this Pulumi project
+RUN echo "* soft nofile 4096" | tee -a /etc/security/limits.conf
+
 USER pulumi
 
 # Copy application
