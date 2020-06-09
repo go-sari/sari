@@ -51,7 +51,7 @@ class Synthesizer:
         if not dt:
             return
         aws = self.model.aws
-        rule_name = "build-sari-start"
+        rule_name = "SARITriggerRun"
         aws_provider = self._get_aws_provider(self.model.aws.default_region)
         cloudwatch.EventRule(rule_name,
                              name=rule_name,
@@ -60,8 +60,8 @@ class Synthesizer:
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
                              opts=pulumi.ResourceOptions(provider=aws_provider))
         cloudwatch.EventTarget(rule_name,
-                               arn=f"arn:aws:codebuild:{aws.default_region}:{aws.account}:project/build-sari",
-                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/build-sari-start",
+                               arn=f"arn:aws:codebuild:{aws.default_region}:{aws.account}:project/run-sari",
+                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/SARITriggerRun",
                                rule=rule_name,
                                opts=pulumi.ResourceOptions(provider=aws_provider))
 
