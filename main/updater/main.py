@@ -50,18 +50,18 @@ class Updater:
         if not dt:
             return
         aws = self.model.aws
-        rule_name = "SARITriggerRun"
+        trigger_role = self.model.aws.iam_roles.trigger_run
         aws_provider = self._get_aws_provider(self.model.aws.default_region)
-        cloudwatch.EventRule(rule_name,
-                             name=rule_name,
+        cloudwatch.EventRule(trigger_role,
+                             name=trigger_role,
                              tags=self.standard_tags,
                              description="Triggers SARI Build at the instant of the Next Transition",
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
                              opts=pulumi.ResourceOptions(provider=aws_provider))
-        cloudwatch.EventTarget(rule_name,
-                               arn=f"arn:aws:codebuild:{aws.default_region}:{aws.account}:project/run-sari",
-                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/SARITriggerRun",
-                               rule=rule_name,
+        cloudwatch.EventTarget(trigger_role,
+                               arn=_get_ci_project_arn(),
+                               role_arn=f"arn:aws:iam::{aws.account}:role/service-role/{trigger_role}",
+                               rule=trigger_role,
                                opts=pulumi.ResourceOptions(provider=aws_provider))
 
     def update_iam(self):
@@ -204,6 +204,7 @@ class Updater:
                             ))
 
     def update_bastion_host(self):
+        """Update the list of users authorized to use the bastion host as a proxy."""
         ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
                      if user.status == "ACTIVE"}
         bh = self.model.bastion_host
@@ -257,16 +258,25 @@ class Updater:
 
 
 def _get_sari_configuration_repo():
-    return os.environ.get("CODEBUILD_SOURCE_REPO_URL") or os.environ["SARI_CONFIG"]
+    return os.environ["CODEBUILD_SOURCE_REPO_URL"]
 
 
 def _get_ci_project_url():
-    cb_arn = os.environ.get("CODEBUILD_BUILD_ARN")
-    if cb_arn:
-        _, _, _, region, account, path, *_ = cb_arn.split(":")
-        return f"https://{region}.console.aws.amazon.com/codesuite/codebuild/{account}/" \
-               f"{path.replace('build/', 'projects/')}"
-    return "UNKNOWN"
+    # arn:aws:codebuild:REGION-ID:ACCOUNT-ID:build/PROJECT_NAME:RUN_UUID
+    cb_arn = os.environ["CODEBUILD_BUILD_ARN"]
+    _, _, _, region, account, path, *_ = cb_arn.split(":")
+    return f"https://{region}.console.aws.amazon.com/codesuite/codebuild/{account}/" \
+           f"{path.replace('build/', 'projects/')}"
+
+
+def _get_ci_project_arn():
+    """Finds the CodeBuild Project's ARN based on the current Build ARN."""
+    # arn:aws:codebuild:REGION-ID:ACCOUNT-ID:build/PROJECT_NAME:RUN_UUID
+    # arn:aws:codebuild:REGION-ID:ACCOUNT-ID:project/PROJECT_NAME
+    cb_arn = os.environ["CODEBUILD_BUILD_ARN"]
+    *parts, build_path, _ = cb_arn.split(":")
+    parts.append(build_path.replace("build/", "project/"))
+    return ":".join(parts)
 
 
 def _aws_make_policy(statements: List[dict]) -> str:

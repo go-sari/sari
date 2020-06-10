@@ -52,6 +52,9 @@ def initial_model() -> Prodict:
             "regions": regions,
             "single_region": regions[0] if len(regions) == 1 else None,
             "default_region": os.environ["AWS_REGION"],
+            "iam_roles": {
+                "trigger_run": os.environ["SARI_IAM_TRIGGER_ROLE_NAME"],
+            },
         },
         okta={
             "organization": os.environ["OKTA_ORG_NAME"],
