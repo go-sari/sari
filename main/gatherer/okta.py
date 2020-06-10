@@ -7,8 +7,8 @@ import jmespath
 from loguru import logger
 from prodict import Prodict
 
-from main.issue import Issue, IssueLevel
-from main.rest import async_retryable_session
+from main.domain import Issue, IssueLevel
+from main.util import async_retryable_session
 from .gatherer import Gatherer
 
 

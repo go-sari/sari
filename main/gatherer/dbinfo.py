@@ -3,9 +3,8 @@ from typing import List, Tuple, Dict
 from prodict import Prodict
 
 from main.aws_client import AwsClient
-from main.dbstatus import DbStatus
-from main.issue import Issue, IssueLevel
-from main.password_resolver import MasterPasswordResolver
+from main.domain import DbStatus, Issue, IssueLevel
+from main.gatherer.pwd_resolver import MasterPasswordResolver
 from .gatherer import Gatherer
 
 ENGINE_TYPE = "mysql"

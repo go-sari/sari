@@ -7,11 +7,10 @@ import pytz
 import yaml
 from prodict import Prodict
 
-from main.dbstatus import DbStatus
-from main.issue import Issue, IssueLevel
-from main.misc import wc_expand
-from main.password_resolver import MasterPasswordResolver
+from main.domain import DbStatus, Issue, IssueLevel
+from main.util import wc_expand
 from .gatherer import Gatherer
+from .pwd_resolver import MasterPasswordResolver
 
 # Limited by MySQL. See https://dev.mysql.com/doc/refman/5.7/en/user-names.html
 MAX_DB_USERNAME_LENGTH = 32
@@ -65,7 +64,7 @@ class UserConfigGatherer(Gatherer):
         return updates, issues
 
     def _parse_permissions(self, perm_list: List[dict],
-                           default_region: str,
+                           default_region: Optional[str],
                            default_grant_type: str,
                            db_ids: List[str]) -> Dict[str, str]:
         permissions: Dict[str, str] = {}

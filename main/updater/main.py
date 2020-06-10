@@ -19,18 +19,17 @@ from loguru import logger
 from paramiko import SSHException
 from prodict import Prodict
 
-from main.bastion_host import update_authorized_keys
-from main.dbstatus import DbStatus
+from main.domain import DbStatus
+from .ssh import update_authorized_keys
 
 ANY_HOST = "%"
 
 SARI_ROLE_NAME = "SARI"
 
 
-class Synthesizer:
+class Updater:
 
-    def __init__(self, config: Prodict, model: Prodict):
-        self.config = config
+    def __init__(self, model: Prodict):
         self.model = model
         self.standard_tags = {
             "Provisioning": "SARI",
@@ -38,15 +37,15 @@ class Synthesizer:
             "sari:project": _get_ci_project_url(),
         }
 
-    def synthesize_all(self):
-        self.synthesize_cloudwatch()
-        self.synthesize_iam()
-        self.synthesize_mysql()
-        self.synthesize_glue_connections()
-        self.synthesize_okta()
-        self.synthesize_bastion_host()
+    def update_all(self):
+        self.update_cloudwatch()
+        self.update_iam()
+        self.update_mysql()
+        self.update_glue_connections()
+        self.update_okta()
+        self.update_bastion_host()
 
-    def synthesize_cloudwatch(self):
+    def update_cloudwatch(self):
         dt: datetime = self.model.job.next_transition
         if not dt:
             return
@@ -65,7 +64,7 @@ class Synthesizer:
                                rule=rule_name,
                                opts=pulumi.ResourceOptions(provider=aws_provider))
 
-    def synthesize_iam(self):
+    def update_iam(self):
         aws = self.model.aws
         okta = self.model.okta
         assume_role_policy = _aws_make_policy([{
@@ -107,7 +106,7 @@ class Synthesizer:
                        policy=db_policy,
                        opts=pulumi.ResourceOptions(provider=aws_provider))
 
-    def synthesize_mysql(self):
+    def update_mysql(self):
         for login, user in self.model.okta.users.items():
             if user.status != "ACTIVE":
                 continue
@@ -130,13 +129,13 @@ class Synthesizer:
                             user=mysql_user.user,
                             database=db.db_name,
                             host=ANY_HOST,
-                            privileges=self.config.grant_types[grant_type],
+                            privileges=self.model.custom.grant_types[grant_type],
                             opts=pulumi.ResourceOptions(
                                 provider=provider,
                                 delete_before_replace=True,
                             ))
 
-    def synthesize_okta(self):
+    def update_okta(self):
         okta = self.model.okta
         provider = pulumi_okta.Provider("default",
                                         api_token=pulumi.Output.secret(okta.api_token),
@@ -155,14 +154,14 @@ class Synthesizer:
                           }),
                           opts=pulumi.ResourceOptions(provider=provider))
 
-    def synthesize_glue_connections(self):
+    def update_glue_connections(self):
         glue_connections = self.model.aws.glue_connections
         databases = self.model.aws.databases
         for db_uid, con in glue_connections.items():
             db = databases[db_uid]
             resource_name = self._res_name(f"glue/{db_uid}")
             password = random.RandomPassword(resource_name,
-                                             length=64,
+                                             length=32,
                                              special=False,
                                              opts=pulumi.ResourceOptions(additional_secret_outputs=["result"]))
             login = "glue.amazonaws.com"
@@ -180,7 +179,7 @@ class Synthesizer:
                         user=mysql_user.user,
                         database=db.db_name,
                         host=mysql_user.host,
-                        privileges=self.config.grant_types[con.grant_type],
+                        privileges=self.model.custom.grant_types[con.grant_type],
                         opts=pulumi.ResourceOptions(
                             provider=mysql_provider,
                             delete_before_replace=True,
@@ -204,7 +203,7 @@ class Synthesizer:
                                 delete_before_replace=True,
                             ))
 
-    def synthesize_bastion_host(self):
+    def update_bastion_host(self):
         ssh_users = {login: user.ssh_pubkey for login, user in self.model.okta.users.items()
                      if user.status == "ACTIVE"}
         bh = self.model.bastion_host
@@ -212,7 +211,7 @@ class Synthesizer:
             _, key_filename = tempfile.mkstemp(text=True)
             Path(key_filename).write_text(bh.admin_private_key)
         else:
-            key_filename = bh.admin_key_filename or f"{self.config.system.config_dir}/admin_id_rsa"
+            key_filename = bh.admin_key_filename or f"{self.model.system.config_dir}/admin_id_rsa"
         logger.info("Enabling SSH access to Bastion Host:")
         try:
             errors = update_authorized_keys(hostname=bh.hostname,
@@ -220,7 +219,7 @@ class Synthesizer:
                                             key_filename=key_filename,
                                             passphrase=bh.admin_key_passphrase,
                                             username=bh.proxy_username,
-                                            ssh_pub_keys=list(ssh_users.values()),
+                                            ssh_pub_keys=ssh_users.values(),
                                             port=bh.port)
             if errors:
                 logger.error("Errors while updating Bastion Host")
@@ -252,13 +251,13 @@ class Synthesizer:
         db = self.model.aws.databases[db_uid]
         return mysql.Provider(self._res_name(db_uid),
                               endpoint=f"{db.endpoint.address}:{db.endpoint.port}",
-                              proxy=self.config.system.proxy,
+                              proxy=self.model.system.proxy,
                               username=db.master_username,
                               password=pulumi.Output.secret(db.master_password))
 
 
 def _get_sari_configuration_repo():
-    return os.environ.get("CODEBUILD_SOURCE_REPO_URL") or os.environ.get("CONFIG") or "UNKNOWN"
+    return os.environ.get("CODEBUILD_SOURCE_REPO_URL") or os.environ["SARI_CONFIG"]
 
 
 def _get_ci_project_url():

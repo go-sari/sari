@@ -9,8 +9,7 @@ import socks
 from loguru import logger
 from prodict import Prodict
 
-from main.dbstatus import DbStatus
-from main.issue import Issue, IssueLevel
+from main.domain import DbStatus, Issue, IssueLevel
 from .gatherer import Gatherer
 
 MYSQL_CONNECT_TIMEOUT = 4

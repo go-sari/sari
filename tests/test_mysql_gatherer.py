@@ -4,7 +4,7 @@ import pytest
 from prodict import Prodict
 from testcontainers.mysql import MySqlContainer
 
-from main.gatherer import MySqlGatherer
+from main.gatherer.mysql import MySqlGatherer
 from tests.test_gatherers import assert_dict_equals
 
 

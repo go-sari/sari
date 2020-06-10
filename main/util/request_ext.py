@@ -8,10 +8,7 @@ SC_TOO_MANY_REQUESTS = 429
 
 
 def async_retryable_session(executor: ThreadPoolExecutor) -> FuturesSession:
-    return retryable_session(FuturesSession(executor))
-
-
-def retryable_session(session):
+    session = FuturesSession(executor)
     retries = 3
     retry = Retry(
         total=retries,

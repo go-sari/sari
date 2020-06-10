@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from prodict import Prodict
 
-from main.issue import Issue
+from main.domain import Issue
 
 
 class Gatherer:

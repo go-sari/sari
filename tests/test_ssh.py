@@ -2,7 +2,7 @@ import pytest
 from paramiko.config import SSH_PORT
 from testcontainers.core.container import DockerContainer
 
-from main.bastion_host import update_authorized_keys
+from main.updater.ssh import update_authorized_keys
 
 
 @pytest.mark.slow

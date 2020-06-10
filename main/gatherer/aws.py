@@ -3,7 +3,7 @@ from typing import List, Tuple
 from prodict import Prodict
 
 from main.aws_client import AwsClient
-from main.issue import Issue
+from main.domain import Issue
 from .gatherer import Gatherer
 
 

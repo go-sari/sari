@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterable
 
 from paramiko.client import SSHClient, AutoAddPolicy
 from paramiko.config import SSH_PORT
@@ -9,7 +9,7 @@ def update_authorized_keys(hostname: str,
                            key_filename,
                            passphrase: str,
                            username: str,
-                           ssh_pub_keys: List[str],
+                           ssh_pub_keys: Iterable[str],
                            port: int = None) -> List[str]:
     with SSHClient() as client:
         # noinspection ParamikoHostkeyBypass

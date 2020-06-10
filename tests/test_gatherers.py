@@ -19,10 +19,13 @@ from moto.iam.models import ACCOUNT_ID
 from prodict import Prodict
 
 from main.aws_client import AwsClient
-from main.dict import dict_deep_merge
-from main.gatherer import *
-from main.issue import IssueLevel
-from main.password_resolver import MasterPasswordResolver
+from main.domain import IssueLevel
+from main.gatherer.aws import AwsGatherer
+from main.gatherer.config import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer
+from main.gatherer.dbinfo import DatabaseInfoGatherer
+from main.gatherer.okta import OktaGatherer
+from main.gatherer.pwd_resolver import MasterPasswordResolver
+from main.util import dict_deep_merge
 
 AWS_REGION_US = "us-east-1"
 AWS_REGION_UK = "eu-west-2"

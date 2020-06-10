@@ -3,23 +3,19 @@ import os
 import sys
 from loguru import logger
 
-from main.builder import build_model
-from main.config import load_config
-from main.issue import log_issues
-from main.synthesizer import Synthesizer
+from main.domain import log_issues
+from main.gatherer import ModelBuilder
+from main.updater import Updater
 
 
-def is_in_ci():
-    return os.environ.get("CI", None) == "true"
+def in_automation():
+    return os.environ.get("CI") == "true"
 
 
 logger.remove()
-if is_in_ci():
-    logger.add(sys.stdout, colorize=False, format="{time:HH:mm:ss.SSS} {level} {message}")
-else:
-    logger.add(sys.stdout, colorize=True, format="<green>{time:HH:mm:ss.SSS}</green> {level} <lvl>{message}</lvl>")
+logger.add(sys.stdout, colorize=(not in_automation()),
+           format="<green>{time:HH:mm:ss.SSS}</green> {level} <lvl>{message}</lvl>")
 
-config = load_config()
-model, issues = build_model(config)
+model, issues = ModelBuilder().build()
 log_issues(issues)
-Synthesizer(config, model).synthesize_all()
+Updater(model).update_all()
