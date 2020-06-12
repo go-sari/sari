@@ -11,6 +11,7 @@ moto = "==1.3.14"
 pre-commit = "~=2.2"
 pytest = "~=5.4"
 pytest-cov = "~=2.8"
+pytest-sugar = "*"
 pytest-rerunfailures = "*"
 testcontainers = {extras = ["mysql"], version = "*"}
 
