@@ -35,11 +35,6 @@ class OktaGatherer(Gatherer):
                                  headers=(self._http_headers()))
             futures.append(future)
 
-        # Additional query to list all assigned users and their SAML roles
-        future = session.get(f"https://{okta.organization}.okta.com/api/v1/apps/{okta.aws_app.app_id}/users",
-                             headers=(self._http_headers()))
-        futures.append(future)
-
         issues = []
         users_ext = {}
         logger.info(f"Checking Okta {okta.organization.capitalize()}'s Users:")
@@ -75,14 +70,6 @@ class OktaGatherer(Gatherer):
             leader = "." * (2 + login_max_len - len(login))
             logger.opt(colors=True).info(f"  {login} {leader} <{color}>{status}</{color}>")
             users_ext[login] = user_data
-
-        result = futures[-1].result()
-        result.raise_for_status()
-        json_response = json.loads(result.content.decode())
-        for entry in json_response:
-            login = entry["externalId"]
-            if login in users_ext:
-                users_ext[login]["saml_roles"] = entry["profile"].get("samlRoles", [])
 
         return Prodict(okta={"users": users_ext}), issues
 

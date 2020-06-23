@@ -128,7 +128,6 @@ MASTER_PASSWORD_DEFAULTS = {
     r"([a-z][a-z0-9-]+)": r"ssm:\1.master_password"
 }
 
-OKTA_AWS_APP_ID = "7ns8u7ry8voMhQOsa644"
 OKTA_API_TOKEN = "000AmAPPcvEZ8qvjY3vwh7CS6__JrRNatR3XuvaCZx"
 
 
@@ -146,10 +145,6 @@ def initial_model() -> Prodict:
         },
         "okta": {
             "organization": "acme",
-            "aws_app": {
-                "app_id": OKTA_AWS_APP_ID,
-                "iam_idp": "Okta"
-            },
         },
         "job": {},
     })
@@ -401,7 +396,6 @@ class TestGatherers:
             "db_username": "miguel.heidler@acme.com",
             "permissions": {},
         }
-        model.okta.aws_app.app_id = OKTA_AWS_APP_ID
 
         query_prefix = r"^limit=1&search=profile\.login\+eq\+"
 
@@ -421,21 +415,9 @@ class TestGatherers:
                                 "Content-Type": "application/json"
                             })
 
-        # noinspection PyUnusedLocal
-        @urlmatch(scheme="https", netloc="acme.okta.com",
-                  path=rf"^/api/v1/apps/{OKTA_AWS_APP_ID}/users$")
-        def okta_app_users(url, request):
-            # pylint: disable=W0613
-            assert request.headers["Authorization"] == f"SSWS {OKTA_API_TOKEN}"
-            return response(status_code=200,
-                            content=Path(f"tests/data/okta_app_users.json").read_text(),
-                            headers={
-                                "Content-Type": "application/json"
-                            })
-
         with ThreadPoolExecutor(max_workers=1) as executor:
             okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
-            with HTTMock(okta_user_info, okta_app_users):
+            with HTTMock(okta_user_info):
                 resp, issues = okta_gatherer.gather(model)
         assert len(issues) == 3
         assert issues[0].level == IssueLevel.ERROR
@@ -459,11 +441,6 @@ class TestGatherers:
                 "user_id": "00m6q2lgisjgmFq64772",
                 "ssh_pubkey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEfzjdkO1LKnS/it62jmw9tH4BznlnDCBrzaKguujJ15 "
                               "leroy.trent@acme.com",
-                "saml_roles": [
-                    "sari_the-works",
-                    "sari_waterstones",
-                    "sari_blackwells"
-                ],
             },
             "bridget.huntington-whiteley@acme.com": {
                 "status": "ACTIVE",

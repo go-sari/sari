@@ -24,13 +24,11 @@ ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 # $ jq -r '.default.pulumi.version' Pipfile.lock | sed -e 's/^==//'
 ARG pulumi_version=2.4.0
 # $ jq -r '.default."pulumi-aws".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_aws_version=2.8.0
+ARG pulumi_plugin_aws_version=2.9.1
 # $ jq -r '.default."pulumi-mysql".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_mysql_version=2.1.2
-# $ jq -r '.default."pulumi-okta".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_okta_version=2.1.2
+ARG pulumi_plugin_mysql_version=2.1.3
 # $ jq -r '.default."pulumi-random".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_random_version=2.1.2
+ARG pulumi_plugin_random_version=2.1.3
 
 # Install Pulumi & Plugins in one go
 # Optmizations that saves 175MB:
@@ -48,7 +46,7 @@ RUN set -eux; \
     # 1.1 Install Pulumi & Plugins
     curl --proto '=https' --tlsv1.2 -fsSL https://get.pulumi.com/ | sh -s -- --version $pulumi_version; \
     chown -R pulumi $HOME/.pulumi; \
-    for p in aws mysql okta random; do \
+    for p in aws mysql random; do \
         eval version=\$pulumi_plugin_${p}_version; \
         su pulumi -c "$HOME/.pulumi/bin/pulumi plugin install resource $p $version"; \
     done; \

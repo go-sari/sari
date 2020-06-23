@@ -59,10 +59,6 @@ def initial_model() -> Prodict:
         okta={
             "organization": os.environ["OKTA_ORG_NAME"],
             "api_token": os.environ["OKTA_API_TOKEN"],
-            "aws_app": {
-                "app_id": os.environ["OKTA_AWS_APP_ID"],
-                "iam_idp": os.environ["OKTA_AWS_APP_IAM_IDP"],
-            }
         },
         bastion_host={
             "hostname": os.environ["BH_HOSTNAME"],

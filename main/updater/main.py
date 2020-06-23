@@ -6,20 +6,19 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
+from loguru import logger
+from paramiko import SSHException
+from prodict import Prodict
+
 import pulumi
 import pulumi_aws
 import pulumi_aws.cloudwatch as cloudwatch
 import pulumi_aws.glue as glue
 import pulumi_aws.iam as iam
 import pulumi_mysql as mysql
-import pulumi_okta
-import pulumi_okta.app as okta_app
 import pulumi_random as random
-from loguru import logger
-from paramiko import SSHException
-from prodict import Prodict
-
 from main.domain import DbStatus
+
 from .ssh import update_authorized_keys
 
 MANAGED_BY_SARI_NOTICE = "Provisioned by SARI -- DO NOT EDIT"
@@ -44,7 +43,6 @@ class Updater:
         self.update_iam()
         self.update_mysql()
         self.update_glue_connections()
-        self.update_okta()
         self.update_bastion_host()
 
     def update_cloudwatch(self):
@@ -57,7 +55,7 @@ class Updater:
         cloudwatch.EventRule(trigger_role,
                              name=trigger_role,
                              tags=self.standard_tags,
-                             description="Triggers SARI Build at the instant of the Next Transition",
+                             description=MANAGED_BY_SARI_NOTICE,
                              schedule_expression=f"cron({dt.minute} {dt.hour} {dt.day} {dt.month} ? {dt.year})",
                              opts=pulumi.ResourceOptions(provider=aws_provider))
         cloudwatch.EventTarget(trigger_role,
@@ -74,7 +72,10 @@ class Updater:
                             policy=_aws_make_policy([{
                                 "Effect": "Allow",
                                 "Action": "rds-db:connect",
-                                "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}"
+                                "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}",
+                                "Condition": {
+                                    "StringEquals": {"aws:PrincipalTag/User": login}
+                                },
                             } for login, user in self.model.okta.users.items()
                                 if user.status == "ACTIVE" and user.permissions]
                             ))
@@ -108,25 +109,6 @@ class Updater:
                                 provider=provider,
                                 delete_before_replace=True,
                             ))
-
-    def update_okta(self):
-        okta = self.model.okta
-        provider = pulumi_okta.Provider("default",
-                                        api_token=pulumi.Output.secret(okta.api_token),
-                                        org_name=okta.organization)
-        app_id = okta.aws_app.app_id
-        for login, user in okta.users.items():
-            if user.status != "ACTIVE":
-                continue
-            okta_app.User(login,
-                          app_id=app_id,
-                          user_id=user.user_id,
-                          username=login,
-                          profile=json.dumps({
-                              "email": login,
-                              "samlRoles": [SARI_ROLE_NAME]
-                          }),
-                          opts=pulumi.ResourceOptions(provider=provider))
 
     def update_glue_connections(self):
         glue_connections = self.model.aws.glue_connections
@@ -258,3 +240,11 @@ def _aws_make_policy(statements: List[dict]) -> str:
         "Version": "2012-10-17",
         "Statement": statements
     })
+
+
+def _backend_s3_bucket_name() -> str:
+    bucket_url = os.environ["PULUMI_BACKEND_URL"]
+    scheme = "s3://"
+    if not bucket_url.startswith(scheme):
+        raise Exception("PULUMI_BACKEND_URL should be an s3 url")
+    return bucket_url[len(scheme):]
