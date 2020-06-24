@@ -22,6 +22,8 @@ from prodict import Prodict
 from main.domain import DbStatus
 from .ssh import update_authorized_keys
 
+MANAGED_BY_SARI_NOTICE = "Provisioned by SARI -- DO NOT EDIT"
+
 ANY_HOST = "%"
 
 SARI_ROLE_NAME = "SARI"
@@ -66,45 +68,17 @@ class Updater:
 
     def update_iam(self):
         aws = self.model.aws
-        okta = self.model.okta
-        assume_role_policy = _aws_make_policy([{
-            "Sid": "1",
-            "Effect": "Allow",
-            "Principal": {
-                "Federated": f"arn:aws:iam::{aws.account}:saml-provider/{okta.aws_app.iam_idp}"
-            },
-            "Action": "sts:AssumeRoleWithSAML",
-            "Condition": {
-                "StringEquals": {
-                    "SAML:aud": "https://signin.aws.amazon.com/saml"
-                }
-            }
-        }])
-        aws_provider = self._get_aws_provider(self.model.aws.default_region)
-        role = iam.Role("sari",
-                        name=SARI_ROLE_NAME,
-                        description=f"Allow access to SARI-enabled databases",
-                        tags=self.standard_tags,
-                        assume_role_policy=assume_role_policy,
-                        opts=pulumi.ResourceOptions(provider=aws_provider))
-        db_policy = _aws_make_policy(
-            [{
-                "Sid": "DescribeDBInstances",
-                "Effect": "Allow",
-                "Action": "rds:DescribeDBInstances",
-                "Resource": "*"
-            }] + [{
-                "Effect": "Allow",
-                "Action": "rds-db:connect",
-                "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}"
-            } for login, user in self.model.okta.users.items()
-                if user.status == "ACTIVE" and user.permissions]
-        )
-        iam.RolePolicy("sari",
-                       name=SARI_ROLE_NAME,
-                       role=role.id,
-                       policy=db_policy,
-                       opts=pulumi.ResourceOptions(provider=aws_provider))
+        policy = iam.Policy("sari",
+                            name="SARIPolicy",
+                            description=MANAGED_BY_SARI_NOTICE,
+                            policy=_aws_make_policy([{
+                                "Effect": "Allow",
+                                "Action": "rds-db:connect",
+                                "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}"
+                            } for login, user in self.model.okta.users.items()
+                                if user.status == "ACTIVE" and user.permissions]
+                            ))
+        iam.RolePolicyAttachment("sari", role=SARI_ROLE_NAME, policy_arn=policy.arn)
 
     def update_mysql(self):
         for login, user in self.model.okta.users.items():
@@ -188,7 +162,7 @@ class Updater:
             aws_provider = self._get_aws_provider(region)
             glue.Connection(resource_name,
                             name=f"sari.{db_id}",
-                            description="Provisioned by SARI -- DO NOT EDIT",
+                            description=MANAGED_BY_SARI_NOTICE,
                             connection_type="JDBC",
                             connection_properties={
                                 "JDBC_CONNECTION_URL": f"jdbc:mysql://{db.endpoint.address}:{db.endpoint.port}/"
