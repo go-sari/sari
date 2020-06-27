@@ -22,9 +22,9 @@ ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
 # $ jq -r '.default.pulumi.version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_version=2.4.0
+ARG pulumi_version=2.5.0
 # $ jq -r '.default."pulumi-aws".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_aws_version=2.9.1
+ARG pulumi_plugin_aws_version=2.11.0
 # $ jq -r '.default."pulumi-mysql".version' Pipfile.lock | sed -e 's/^==//'
 ARG pulumi_plugin_mysql_version=2.1.3
 # $ jq -r '.default."pulumi-random".version' Pipfile.lock | sed -e 's/^==//'
