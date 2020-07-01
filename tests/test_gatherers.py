@@ -94,9 +94,9 @@ USERS_CONFIG = {
     "leroy.trent@acme.com": {
         "db_username": "leroy.trent@acme.com",
         "permissions": {
-            f"{AWS_REGION_US}/borders": "query",
-            f"{AWS_REGION_UK}/blackwells": "query",
-            f"{AWS_REGION_UK}/whsmith": "crud",
+            f"{AWS_REGION_US}/borders": {"db_names": ["db_borders", "ebooks"], "grant_type": "query"},
+            f"{AWS_REGION_UK}/blackwells": {"db_names": ["db_blackwells"], "grant_type": "query"},
+            f"{AWS_REGION_UK}/whsmith": {"db_names": ["db_whsmith"], "grant_type": "crud"},
         },
     },
     "bridget.huntington-whiteley@acme.com": {
@@ -106,7 +106,7 @@ USERS_CONFIG = {
     "valerie.tennant@acme.com": {
         "db_username": "valerie.tennant@acme.com",
         "permissions": {
-            f"{AWS_REGION_UK}/blackwells": "crud"
+            f"{AWS_REGION_UK}/blackwells": {"db_names": ["db_blackwells"], "grant_type": "crud"}
         },
     },
 }
@@ -114,6 +114,7 @@ USERS_CONFIG = {
 SERVICES_CONFIG = {
     "glue_connections": {
         f"{AWS_REGION_UK}/blackwells": {
+            "db_names": ["db_blackwells"],
             "grant_type": "crud",
             "physical_connection_requirements": {
                 "availability_zone": f"{AWS_REGION_UK}a",
@@ -289,18 +290,18 @@ class TestGatherers:
                 "databases": {
                     f"{AWS_REGION_US}/borders": {
                         "permissions": {
-                            "leroy.trent@acme.com": "query",
+                            "leroy.trent@acme.com": {"db_names": ["db_borders", "ebooks"], "grant_type": "query"},
                         },
                     },
                     f"{AWS_REGION_UK}/blackwells": {
                         "permissions": {
-                            "leroy.trent@acme.com": "query",
-                            "valerie.tennant@acme.com": "crud",
+                            "leroy.trent@acme.com": {"db_names": ["db_blackwells"], "grant_type": "query"},
+                            "valerie.tennant@acme.com": {"db_names": ["db_blackwells"], "grant_type": "crud"},
                         },
                     },
                     f"{AWS_REGION_UK}/whsmith": {
                         "permissions": {
-                            "leroy.trent@acme.com": "crud",
+                            "leroy.trent@acme.com": {"db_names": ["db_whsmith"], "grant_type": "crud"},
                         },
                     },
                 },
@@ -343,8 +344,8 @@ class TestGatherers:
                     "leroy.trent@acme.com": {
                         "db_username": "leroy.trent@acme.com",
                         "permissions": {
-                            f"{AWS_REGION_UK}/blackwells": "query",
-                            f"{AWS_REGION_UK}/whsmith": "crud",
+                            f"{AWS_REGION_UK}/blackwells": {"db_names": ["db_blackwells"], "grant_type": "query"},
+                            f"{AWS_REGION_UK}/whsmith": {"db_names": ["db_whsmith"], "grant_type": "crud"},
                         },
                     },
                 },
@@ -353,12 +354,12 @@ class TestGatherers:
                 "databases": {
                     f"{AWS_REGION_UK}/blackwells": {
                         "permissions": {
-                            "leroy.trent@acme.com": "query",
+                            "leroy.trent@acme.com": {"db_names": ["db_blackwells"], "grant_type": "query"},
                         },
                     },
                     f"{AWS_REGION_UK}/whsmith": {
                         "permissions": {
-                            "leroy.trent@acme.com": "crud",
+                            "leroy.trent@acme.com": {"db_names": ["db_whsmith"], "grant_type": "crud"},
                         },
                     },
                 },

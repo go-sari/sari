@@ -2,6 +2,10 @@
   default_grant_type: query
   permissions:
     - db: "*"
+    - db: "us-east-1/borders"
+      db_names:
+        - db_borders
+        - ebooks
     - db: "eu-west-2/whsmith"
       grant_type: crud
       not_valid_after: 2020-05-26 10:22:00 +01

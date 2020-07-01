@@ -41,6 +41,7 @@ class UserConfigGatherer(Gatherer):
                              if DbStatus[db.status] >= DbStatus.ENABLED]
         users = {}
         databases = {}
+        default_db_name = {db_uid: db.db_name for db_uid, db in model.aws.databases.items()}
         for user in users_list:
             login = user["login"]
             default_grant_type = user.get("default_grant_type", DEFAULT_GRANT_TYPE)
@@ -49,7 +50,8 @@ class UserConfigGatherer(Gatherer):
                     user.get("permissions", []),
                     model.aws.single_region,
                     default_grant_type,
-                    enabled_databases)
+                    enabled_databases,
+                    default_db_name)
                 users[login] = {
                     "db_username": login[:MAX_DB_USERNAME_LENGTH],
                     "permissions": permissions
@@ -66,8 +68,9 @@ class UserConfigGatherer(Gatherer):
     def _parse_permissions(self, perm_list: List[dict],
                            default_region: Optional[str],
                            default_grant_type: str,
-                           db_ids: List[str]) -> Dict[str, str]:
-        permissions: Dict[str, str] = {}
+                           db_ids: List[str],
+                           default_db_name: Dict[str, dict]) -> Dict[str, dict]:
+        permissions: Dict[str, dict] = {}
         for perm in perm_list:
             db_ref = perm['db']
             if "/" not in db_ref and default_region:
@@ -77,6 +80,9 @@ class UserConfigGatherer(Gatherer):
                 raise ValueError(f"Not existing and enabled DB instance reference '{db_ref}'")
             not_valid_before = _check_dt(perm, "not_valid_before")
             not_valid_after = _check_dt(perm, "not_valid_after")
+            db_names = perm.get('db_names')
+            if isinstance(db_names, str):
+                db_names = [db_names]
             grant_type = perm.get('grant_type', default_grant_type)
             if not_valid_before or not_valid_after:
                 if not_valid_before and not_valid_after and (not_valid_after < not_valid_before):
@@ -91,7 +97,10 @@ class UserConfigGatherer(Gatherer):
                         self._set_next_transition(not_valid_after)
             if grant_type != "none":
                 for db_uid in db_id_list:
-                    permissions[db_uid] = grant_type
+                    permissions[db_uid] = dict(
+                        db_names=(db_names or [default_db_name[db_uid]]),
+                        grant_type=grant_type
+                    )
         return permissions
 
     def _set_next_transition(self, dt: datetime):
@@ -157,10 +166,14 @@ class ServiceConfigGatherer(Gatherer):
                                     message=f"Not existing and enabled DB instance reference '{db_ref}'"))
                 continue
             pcr = conn.get("physical_connection_requirements", {})
+            supplied_db_names = conn.get("db_names")
+            if isinstance(supplied_db_names, str):
+                supplied_db_names = [supplied_db_names]
             grant_type = conn.get("grant_type", DEFAULT_GRANT_TYPE)
             for db_uid in db_id_list:
                 db = model.aws.databases[db_uid]
                 updates[db_uid] = {
+                    "db_names": supplied_db_names or [db.db_name],
                     "grant_type": grant_type,
                     "physical_connection_requirements": {
                         "availability_zone": pcr.get("availability_zone", db.availability_zone),

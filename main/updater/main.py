@@ -85,7 +85,7 @@ class Updater:
         for login, user in self.model.okta.users.items():
             if user.status != "ACTIVE":
                 continue
-            for db_uid, grant_type in user.permissions.items():
+            for db_uid, permission in user.permissions.items():
                 db = self.model.aws.databases[db_uid]
                 if DbStatus[db.status] < DbStatus.ACCESSIBLE:
                     continue
@@ -100,15 +100,18 @@ class Updater:
                                             provider=provider,
                                             delete_before_replace=True,
                                         ))
-                mysql.Grant(resource_name,
-                            user=mysql_user.user,
-                            database=db.db_name,
-                            host=ANY_HOST,
-                            privileges=self.model.custom.grant_types[grant_type],
-                            opts=pulumi.ResourceOptions(
-                                provider=provider,
-                                delete_before_replace=True,
-                            ))
+                for db_name in permission.db_names:
+                    grant_name = resource_name if db_name == db.db_name \
+                                                  else self._res_name(f"{db_uid}.{db_name}/{login}")
+                    mysql.Grant(grant_name,
+                                user=mysql_user.user,
+                                database=db_name,
+                                host=ANY_HOST,
+                                privileges=self.model.custom.grant_types[permission.grant_type],
+                                opts=pulumi.ResourceOptions(
+                                    provider=provider,
+                                    delete_before_replace=True,
+                                ))
 
     def update_glue_connections(self):
         glue_connections = self.model.aws.glue_connections
@@ -131,15 +134,18 @@ class Updater:
                                         provider=mysql_provider,
                                         delete_before_replace=True,
                                     ))
-            mysql.Grant(resource_name,
-                        user=mysql_user.user,
-                        database=db.db_name,
-                        host=mysql_user.host,
-                        privileges=self.model.custom.grant_types[con.grant_type],
-                        opts=pulumi.ResourceOptions(
-                            provider=mysql_provider,
-                            delete_before_replace=True,
-                        ))
+            for db_name in con.db_names:
+                grant_name = resource_name if db_name == db.db_name \
+                    else self._res_name("/".join((db_uid, db_name, login)))
+                mysql.Grant(grant_name,
+                            user=mysql_user.user,
+                            database=db.db_name,
+                            host=mysql_user.host,
+                            privileges=self.model.custom.grant_types[con.grant_type],
+                            opts=pulumi.ResourceOptions(
+                                provider=mysql_provider,
+                                delete_before_replace=True,
+                            ))
             region, db_id = db_uid.split("/")
             aws_provider = self._get_aws_provider(region)
             glue.Connection(resource_name,
