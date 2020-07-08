@@ -1,4 +1,4 @@
-FROM python:3.7.7-slim-buster as stage0
+FROM python:3.8.4-slim-buster as stage0
 
 RUN set -uex; \
     apt-get update -yqq; \
@@ -22,19 +22,19 @@ ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install the Pulumi SDK, including the CLI and language runtimes.
 # $ jq -r '.default.pulumi.version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_version=2.5.0
+ARG pulumi_version=2.6.1
 # $ jq -r '.default."pulumi-aws".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_aws_version=2.11.0
+ARG pulumi_plugin_aws_version=2.12.0
 # $ jq -r '.default."pulumi-mysql".version' Pipfile.lock | sed -e 's/^==//'
 ARG pulumi_plugin_mysql_version=2.1.3
 # $ jq -r '.default."pulumi-random".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_random_version=2.1.3
+ARG pulumi_plugin_random_version=2.2.0
 
 # Install Pulumi & Plugins in one go
 # Optmizations that saves 175MB:
 #   1. Removed non-used language-oriented runtimes
 #   2. Stripped binaries
-# Modified folders: $HOME/.pulumi /usr/local/lib/python3.7
+# Modified folders: $HOME/.pulumi /usr/local/lib/python3.8
 COPY --chown=pulumi:pulumi Pipfile* ./
 RUN set -eux; \
     # 0 [System]
@@ -72,13 +72,13 @@ RUN set -eux; \
     # 2.2 Uninstall installers
     pip3 uninstall --disable-pip-version-check --yes pipenv virtualenv virtualenv-clone; \
     # 2.3 Remove unused
-    rm -rv $HOME/.local/lib/python3.7/site-packages/mysql-vendor; \
+    rm -rv $HOME/.local/lib/python3.8/site-packages/mysql-vendor; \
     find $HOME/.local -type d -name __pycache__ \
         -exec rm -rf {} \; -prune; \
-    find /usr/local/lib/python3.7 -type d -name __pycache__ \
+    find /usr/local/lib/python3.8 -type d -name __pycache__ \
         -exec rm -rf {} \; -prune; \
     # 2.4 Strip executables
-    find $HOME/.local/lib/python3.7 -name \*.so \
+    find $HOME/.local/lib/python3.8 -name \*.so \
         -exec strip --strip-unneeded --preserve-dates {} \; ; \
     # 0.2 Uninstall installers
     apt-get autoremove -yq binutils curl; \
