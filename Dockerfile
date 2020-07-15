@@ -20,16 +20,6 @@ RUN set -eux; \
 WORKDIR $HOME
 ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
-# Install the Pulumi SDK, including the CLI and language runtimes.
-# $ jq -r '.default.pulumi.version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_version=2.6.1
-# $ jq -r '.default."pulumi-aws".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_aws_version=2.12.0
-# $ jq -r '.default."pulumi-mysql".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_mysql_version=2.1.3
-# $ jq -r '.default."pulumi-random".version' Pipfile.lock | sed -e 's/^==//'
-ARG pulumi_plugin_random_version=2.2.0
-
 # Install Pulumi & Plugins in one go
 # Optmizations that saves 175MB:
 #   1. Removed non-used language-oriented runtimes
@@ -41,13 +31,14 @@ RUN set -eux; \
     # 0.0 Packages update
     apt-get update -yqq; \
     # 0.1 Install installers
-    apt-get install -yq --no-install-recommends binutils curl openssh-client; \
+    apt-get install -yq --no-install-recommends binutils curl jq openssh-client; \
     # 1 [Pulumi]
     # 1.1 Install Pulumi & Plugins
+    pulumi_version=$(jq -r .default.pulumi.version Pipfile.lock | sed -e 's/^==//'); \
     curl --proto '=https' --tlsv1.2 -fsSL https://get.pulumi.com/ | sh -s -- --version $pulumi_version; \
     chown -R pulumi $HOME/.pulumi; \
     for p in aws mysql random; do \
-        eval version=\$pulumi_plugin_${p}_version; \
+        version=$(jq -r .default.\"pulumi-$p\".version Pipfile.lock | sed -e 's/^==//'); \
         su pulumi -c "$HOME/.pulumi/bin/pulumi plugin install resource $p $version"; \
     done; \
     # 1.2 Remove unused
@@ -81,7 +72,7 @@ RUN set -eux; \
     find $HOME/.local/lib/python3.8 -name \*.so \
         -exec strip --strip-unneeded --preserve-dates {} \; ; \
     # 0.2 Uninstall installers
-    apt-get autoremove -yq binutils curl; \
+    apt-get autoremove -yq binutils curl jq; \
     # 0.3 Remove garbage
     rm -rfv \
         $HOME/.cache \
