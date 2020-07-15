@@ -37,11 +37,11 @@ class UserConfigGatherer(Gatherer):
         issues = []
         with _open(self.cfg_stream) as stream:
             users_list: List[dict] = yaml.safe_load(stream)
-        enabled_databases = [db_uid for db_uid, db in model.aws.databases.items()
-                             if DbStatus[db.status] >= DbStatus.ENABLED]
+        default_db_name = {db_uid: db.db_name for db_uid, db in model.aws.databases.items()
+                           if DbStatus[db.status] >= DbStatus.ENABLED}
+        enabled_databases = list(default_db_name.keys())
         users = {}
         databases = {}
-        default_db_name = {db_uid: db.db_name for db_uid, db in model.aws.databases.items()}
         for user in users_list:
             login = user["login"]
             default_grant_type = user.get("default_grant_type", DEFAULT_GRANT_TYPE)

@@ -143,11 +143,14 @@ def initial_model() -> Prodict:
     return Prodict.from_dict({
         "aws": {
             "regions": [AWS_REGION_US, AWS_REGION_UK],
+            "single_region": False,
         },
         "okta": {
             "organization": "acme",
         },
-        "job": {},
+        "job": {
+            "next_transition": None,
+        },
     })
 
 

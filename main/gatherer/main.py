@@ -69,7 +69,9 @@ def initial_model() -> Prodict:
             "admin_key_passphrase": os.environ["BH_ADMIN_KEY_PASSPHRASE"],
             "proxy_username": os.environ["BH_PROXY_USERNAME"],
         },
-        job={},
+        job={
+            "next_transition": None,
+        },
         grant_types={
             "query": ["SELECT"],
             "crud": ["SELECT", "UPDATE", "INSERT", "DELETE"],

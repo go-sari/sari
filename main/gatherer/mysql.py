@@ -38,7 +38,7 @@ class MySqlGatherer(Gatherer):
         issues = []
         futures = []
         for db_uid, db in databases.items():
-            if db.endpoint:
+            if 'endpoint' in db:
                 future = self.executor.submit(_check_mysql_instance, db)
             else:
                 future = None
