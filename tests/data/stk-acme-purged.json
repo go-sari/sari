@@ -1,0 +1,682 @@
+{
+    "version": 3,
+    "deployment": {
+        "manifest": {
+            "time": "2020-07-15T22:06:06.380612+01:00",
+            "magic": "5a75abb5b2ff53ed9b89f85a9695e29fa8dae3a4fda6f25046f39ac04a413d92",
+            "version": "v2.6.1"
+        },
+        "secrets_providers": {
+            "type": "passphrase",
+            "state": {
+                "salt": "v1:HJh9jIJLGqQ=:v1:fnfqZSG0gYtl2JDv:bR/nA8yr++QCW4+zedXzUbj8bOstxw=="
+            }
+        },
+        "resources": [
+            {
+                "urn": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack"
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default_2_13_0",
+                "custom": true,
+                "id": "2066db1e-c0dc-4230-b628-a90f49f0845a",
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "version": "2.13.0"
+                },
+                "outputs": {
+                    "version": "2.13.0"
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells",
+                "custom": true,
+                "id": "269e8641-8ebb-478e-b806-053201b174ae",
+                "type": "pulumi:providers:mysql",
+                "inputs": {
+                    "endpoint": "blackwells.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306",
+                    "password": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:F1mUKmNtQz2MNxJ/:KiysHKMPgm5Y5kNPwBTFhxRpVCEabYagR3GTQ9TQhrGTBKtKHyCUKx+JauNc5sjT940="
+                    },
+                    "proxy": "socks5://localhost:1080",
+                    "tls": "false",
+                    "username": "acme"
+                },
+                "outputs": {
+                    "endpoint": "blackwells.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306",
+                    "password": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:HQ6YlSSNhMmrEL0Z:ANwaJcayRN9XUjRPPJXtHwnIEr8dsNDH3EJsyOJ5hKrmrgVhwVUV2vR8hfuEG9JvUqA="
+                    },
+                    "proxy": "socks5://localhost:1080",
+                    "tls": "false",
+                    "username": "acme"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "propertyDependencies": {
+                    "endpoint": null,
+                    "password": null,
+                    "proxy": null,
+                    "tls": null,
+                    "username": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default",
+                "custom": true,
+                "id": "ec7b5b09-28e9-49b8-b8f7-bfef6039437f",
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "profile": "ebo-admin",
+                    "region": "eu-west-1"
+                },
+                "outputs": {
+                    "profile": "ebo-admin",
+                    "region": "eu-west-1"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "propertyDependencies": {
+                    "profile": null,
+                    "region": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::aws:iam/policy:Policy::sari",
+                "custom": true,
+                "id": "arn:aws:iam::240236931814:policy/SARIPolicy",
+                "type": "aws:iam/policy:Policy",
+                "inputs": {
+                    "__defaults": [
+                        "path"
+                    ],
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "name": "SARIPolicy",
+                    "path": "/",
+                    "policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"rds-db:connect\", \"Resource\": \"arn:aws:rds-db:*:240236931814:dbuser:*/eliezio.oliveira@gmail.com\", \"Condition\": {\"StringEquals\": {\"aws:PrincipalTag/User\": \"eliezio.oliveira@gmail.com\"}}}, {\"Effect\": \"Allow\", \"Action\": \"rds-db:connect\", \"Resource\": \"arn:aws:rds-db:*:240236931814:dbuser:*/ebo@eliez.io\", \"Condition\": {\"StringEquals\": {\"aws:PrincipalTag/User\": \"ebo@eliez.io\"}}}]}"
+                },
+                "outputs": {
+                    "arn": "arn:aws:iam::240236931814:policy/SARIPolicy",
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "id": "arn:aws:iam::240236931814:policy/SARIPolicy",
+                    "name": "SARIPolicy",
+                    "path": "/",
+                    "policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"rds-db:connect\", \"Resource\": \"arn:aws:rds-db:*:240236931814:dbuser:*/eliezio.oliveira@gmail.com\", \"Condition\": {\"StringEquals\": {\"aws:PrincipalTag/User\": \"eliezio.oliveira@gmail.com\"}}}, {\"Effect\": \"Allow\", \"Action\": \"rds-db:connect\", \"Resource\": \"arn:aws:rds-db:*:240236931814:dbuser:*/ebo@eliez.io\", \"Condition\": {\"StringEquals\": {\"aws:PrincipalTag/User\": \"ebo@eliez.io\"}}}]}"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default_2_13_0::2066db1e-c0dc-4230-b628-a90f49f0845a",
+                "propertyDependencies": {
+                    "description": null,
+                    "name": null,
+                    "policy": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::pulumi:providers:random::default_2_2_0",
+                "custom": true,
+                "id": "53af1b54-ccb8-4747-bfa0-b10b4bfe5955",
+                "type": "pulumi:providers:random",
+                "inputs": {
+                    "version": "2.2.0"
+                },
+                "outputs": {
+                    "version": "2.2.0"
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/eliezio.oliveira@gmail.com",
+                "custom": true,
+                "id": "eliezio.oliveira@gmail.com@%",
+                "type": "mysql:index/user:User",
+                "inputs": {
+                    "__defaults": [],
+                    "authPlugin": "AWSAuthenticationPlugin",
+                    "host": "%",
+                    "tlsOption": "SSL",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "outputs": {
+                    "authPlugin": "AWSAuthenticationPlugin",
+                    "host": "%",
+                    "id": "eliezio.oliveira@gmail.com@%",
+                    "tlsOption": "SSL",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "authPlugin": null,
+                    "host": null,
+                    "tlsOption": null,
+                    "user": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/ebo@eliez.io",
+                "custom": true,
+                "id": "ebo@eliez.io@%",
+                "type": "mysql:index/user:User",
+                "inputs": {
+                    "__defaults": [],
+                    "authPlugin": "AWSAuthenticationPlugin",
+                    "host": "%",
+                    "tlsOption": "SSL",
+                    "user": "ebo@eliez.io"
+                },
+                "outputs": {
+                    "authPlugin": "AWSAuthenticationPlugin",
+                    "host": "%",
+                    "id": "ebo@eliez.io@%",
+                    "tlsOption": "SSL",
+                    "user": "ebo@eliez.io"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "authPlugin": null,
+                    "host": null,
+                    "tlsOption": null,
+                    "user": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::aws:iam/rolePolicyAttachment:RolePolicyAttachment::sari",
+                "custom": true,
+                "id": "SARI-20200701204346488600000001",
+                "type": "aws:iam/rolePolicyAttachment:RolePolicyAttachment",
+                "inputs": {
+                    "__defaults": [],
+                    "policyArn": "arn:aws:iam::240236931814:policy/SARIPolicy",
+                    "role": "SARI"
+                },
+                "outputs": {
+                    "id": "SARI-20200701204346488600000001",
+                    "policyArn": "arn:aws:iam::240236931814:policy/SARIPolicy",
+                    "role": "SARI"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::aws:iam/policy:Policy::sari"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default_2_13_0::2066db1e-c0dc-4230-b628-a90f49f0845a",
+                "propertyDependencies": {
+                    "policyArn": [
+                        "urn:pulumi:sari-test::sari::aws:iam/policy:Policy::sari"
+                    ],
+                    "role": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/blackwells",
+                "custom": true,
+                "id": "none",
+                "type": "random:index/randomPassword:RandomPassword",
+                "inputs": {
+                    "__defaults": [
+                        "lower",
+                        "minLower",
+                        "minNumeric",
+                        "minSpecial",
+                        "minUpper",
+                        "number",
+                        "upper"
+                    ],
+                    "length": 32,
+                    "lower": true,
+                    "minLower": 0,
+                    "minNumeric": 0,
+                    "minSpecial": 0,
+                    "minUpper": 0,
+                    "number": true,
+                    "special": false,
+                    "upper": true
+                },
+                "outputs": {
+                    "id": "none",
+                    "length": 32,
+                    "lower": true,
+                    "minLower": 0,
+                    "minNumeric": 0,
+                    "minSpecial": 0,
+                    "minUpper": 0,
+                    "number": true,
+                    "result": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:DY3tfmhhIy5HoC60:tx9Fc/U/pvloInLPaPEUAHPb5Zrz8s5adlRLM+MJiUvJjRAvxywMuSlo8rakHwTjLl8="
+                    },
+                    "special": false,
+                    "upper": true
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:random::default_2_2_0::53af1b54-ccb8-4747-bfa0-b10b4bfe5955",
+                "propertyDependencies": {
+                    "length": null,
+                    "special": null
+                },
+                "additionalSecretOutputs": [
+                    "result"
+                ]
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/grant:Grant::blackwells/eliezio.oliveira@gmail.com",
+                "custom": true,
+                "id": "eliezio.oliveira@gmail.com@%:`db_blackwells`",
+                "type": "mysql:index/grant:Grant",
+                "inputs": {
+                    "__defaults": [
+                        "grant",
+                        "table",
+                        "tlsOption"
+                    ],
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "outputs": {
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "id": "eliezio.oliveira@gmail.com@%:`db_blackwells`",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/eliezio.oliveira@gmail.com"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "database": null,
+                    "host": null,
+                    "privileges": null,
+                    "user": [
+                        "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/eliezio.oliveira@gmail.com"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/grant:Grant::blackwells.ebooks/eliezio.oliveira@gmail.com",
+                "custom": true,
+                "id": "eliezio.oliveira@gmail.com@%:`ebooks`",
+                "type": "mysql:index/grant:Grant",
+                "inputs": {
+                    "__defaults": [
+                        "grant",
+                        "table",
+                        "tlsOption"
+                    ],
+                    "database": "ebooks",
+                    "grant": false,
+                    "host": "%",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "outputs": {
+                    "database": "ebooks",
+                    "grant": false,
+                    "host": "%",
+                    "id": "eliezio.oliveira@gmail.com@%:`ebooks`",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "eliezio.oliveira@gmail.com"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/eliezio.oliveira@gmail.com"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "database": null,
+                    "host": null,
+                    "privileges": null,
+                    "user": [
+                        "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/eliezio.oliveira@gmail.com"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/grant:Grant::blackwells/ebo@eliez.io",
+                "custom": true,
+                "id": "ebo@eliez.io@%:`db_blackwells`",
+                "type": "mysql:index/grant:Grant",
+                "inputs": {
+                    "__defaults": [
+                        "grant",
+                        "table",
+                        "tlsOption"
+                    ],
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "ebo@eliez.io"
+                },
+                "outputs": {
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "id": "ebo@eliez.io@%:`db_blackwells`",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "ebo@eliez.io"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/ebo@eliez.io"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "database": null,
+                    "host": null,
+                    "privileges": null,
+                    "user": [
+                        "urn:pulumi:sari-test::sari::mysql:index/user:User::blackwells/ebo@eliez.io"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/user:User::glue/blackwells",
+                "custom": true,
+                "id": "glue.amazonaws.com@%",
+                "type": "mysql:index/user:User",
+                "inputs": {
+                    "__defaults": [],
+                    "host": "%",
+                    "plaintextPassword": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:AAUrSsqoNCLmwlyL:1FQdep0AttWRU1l247cgqryrxFHZRwC2TKBeCa6r+54ZKjONao5c/cRJ+IBh1aSVdT0="
+                    },
+                    "tlsOption": "SSL",
+                    "user": "glue.amazonaws.com"
+                },
+                "outputs": {
+                    "host": "%",
+                    "id": "glue.amazonaws.com@%",
+                    "plaintextPassword": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:ahstf88y9S3AhaoX:BixEmmCd+x9CMvnbtA37WTz9924LidYyv//nOLHPzQKawqLOUgCwScwtR+QMHeHwiRYrkynYZd4To3sEAq0TSxRQb3BvCybt58nLR4JKzbG7jw=="
+                    },
+                    "tlsOption": "SSL",
+                    "user": "glue.amazonaws.com"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/blackwells"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "host": null,
+                    "plaintextPassword": [
+                        "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/blackwells"
+                    ],
+                    "tlsOption": null,
+                    "user": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::aws:glue/connection:Connection::glue/blackwells",
+                "custom": true,
+                "id": "240236931814:sari.blackwells",
+                "type": "aws:glue/connection:Connection",
+                "inputs": {
+                    "__defaults": [],
+                    "connectionProperties": {
+                        "JDBC_CONNECTION_URL": "jdbc:mysql://blackwells.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306/db_blackwells",
+                        "JDBC_ENFORCE_SSL": "true",
+                        "PASSWORD": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:frJ4QzTR5fW3FrPd:Q9z7/d00Xfj9iJmZ718IqzAF0RlefqM5XLkEyWuRa3QKuHlHM6bsjPc/gWWJKj2Acvo="
+                        },
+                        "USERNAME": "glue.amazonaws.com",
+                        "__defaults": []
+                    },
+                    "connectionType": "JDBC",
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "name": "sari.blackwells",
+                    "physicalConnectionRequirements": {
+                        "__defaults": [],
+                        "availabilityZone": "eu-west-1c",
+                        "securityGroupIdLists": [
+                            "sg-07bd217267e4dedde"
+                        ],
+                        "subnetId": "subnet-0d9b77c2f4c2bb913"
+                    }
+                },
+                "outputs": {
+                    "arn": "arn:aws:glue:eu-west-1:240236931814:connection/sari.blackwells",
+                    "catalogId": "240236931814",
+                    "connectionProperties": {
+                        "JDBC_CONNECTION_URL": "jdbc:mysql://blackwells.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306/db_blackwells",
+                        "JDBC_ENFORCE_SSL": "true",
+                        "PASSWORD": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:R5jUA6I8OSD9Ja1G:pIxsEoJ1wW1RG6EK1SQGx5y2WA1GW1ZRG8jw/JwXT62wa4cuLTjftod7WMWUN38t0/A="
+                        },
+                        "USERNAME": "glue.amazonaws.com"
+                    },
+                    "connectionType": "JDBC",
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "id": "240236931814:sari.blackwells",
+                    "matchCriterias": [],
+                    "name": "sari.blackwells",
+                    "physicalConnectionRequirements": {
+                        "availabilityZone": "eu-west-1c",
+                        "securityGroupIdLists": [
+                            "sg-07bd217267e4dedde"
+                        ],
+                        "subnetId": "subnet-0d9b77c2f4c2bb913"
+                    }
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/blackwells"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default::ec7b5b09-28e9-49b8-b8f7-bfef6039437f",
+                "propertyDependencies": {
+                    "connectionProperties": [
+                        "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/blackwells"
+                    ],
+                    "connectionType": null,
+                    "description": null,
+                    "name": null,
+                    "physicalConnectionRequirements": null
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::mysql:index/grant:Grant::glue/blackwells",
+                "custom": true,
+                "id": "glue.amazonaws.com@%:`db_blackwells`",
+                "type": "mysql:index/grant:Grant",
+                "inputs": {
+                    "__defaults": [
+                        "grant",
+                        "table",
+                        "tlsOption"
+                    ],
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "glue.amazonaws.com"
+                },
+                "outputs": {
+                    "database": "db_blackwells",
+                    "grant": false,
+                    "host": "%",
+                    "id": "glue.amazonaws.com@%:`db_blackwells`",
+                    "privileges": [
+                        "SELECT"
+                    ],
+                    "table": "*",
+                    "tlsOption": "NONE",
+                    "user": "glue.amazonaws.com"
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::mysql:index/user:User::glue/blackwells"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:mysql::blackwells::269e8641-8ebb-478e-b806-053201b174ae",
+                "propertyDependencies": {
+                    "database": null,
+                    "host": [
+                        "urn:pulumi:sari-test::sari::mysql:index/user:User::glue/blackwells"
+                    ],
+                    "privileges": null,
+                    "user": [
+                        "urn:pulumi:sari-test::sari::mysql:index/user:User::glue/blackwells"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/whsmith",
+                "custom": true,
+                "id": "none",
+                "type": "random:index/randomPassword:RandomPassword",
+                "inputs": {
+                    "__defaults": [
+                        "lower",
+                        "minLower",
+                        "minNumeric",
+                        "minSpecial",
+                        "minUpper",
+                        "number",
+                        "upper"
+                    ],
+                    "length": 32,
+                    "lower": true,
+                    "minLower": 0,
+                    "minNumeric": 0,
+                    "minSpecial": 0,
+                    "minUpper": 0,
+                    "number": true,
+                    "special": false,
+                    "upper": true
+                },
+                "outputs": {
+                    "id": "none",
+                    "length": 32,
+                    "lower": true,
+                    "minLower": 0,
+                    "minNumeric": 0,
+                    "minSpecial": 0,
+                    "minUpper": 0,
+                    "number": true,
+                    "result": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:RxVLI1NeguZ7TbyR:7BBnH8UO8bdnck4cem9mK+pH5zJDpsforc4ISoC3++3wltHuF9NV2B2prNftY2c/eQk="
+                    },
+                    "special": false,
+                    "upper": true
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:random::default_2_2_0::53af1b54-ccb8-4747-bfa0-b10b4bfe5955",
+                "propertyDependencies": {
+                    "length": null,
+                    "special": null
+                },
+                "additionalSecretOutputs": [
+                    "result"
+                ]
+            },
+            {
+                "urn": "urn:pulumi:sari-test::sari::aws:glue/connection:Connection::glue/whsmith",
+                "custom": true,
+                "id": "240236931814:sari.whsmith",
+                "type": "aws:glue/connection:Connection",
+                "inputs": {
+                    "__defaults": [],
+                    "connectionProperties": {
+                        "JDBC_CONNECTION_URL": "jdbc:mysql://whsmith.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306/db_whsmith",
+                        "JDBC_ENFORCE_SSL": "true",
+                        "PASSWORD": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:gOGzmFEUTIe1keoo:cDEQhqs4b2R2DkOQyQkM/enBP8khqAWnimModGOrVmfs5w9gAgviLTA4VIoung+LgoU="
+                        },
+                        "USERNAME": "glue.amazonaws.com",
+                        "__defaults": []
+                    },
+                    "connectionType": "JDBC",
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "name": "sari.whsmith",
+                    "physicalConnectionRequirements": {
+                        "__defaults": [],
+                        "availabilityZone": "eu-west-1b",
+                        "securityGroupIdLists": [
+                            "sg-07bd217267e4dedde"
+                        ],
+                        "subnetId": "subnet-0ba5a26d5a5c2378c"
+                    }
+                },
+                "outputs": {
+                    "arn": "arn:aws:glue:eu-west-1:240236931814:connection/sari.whsmith",
+                    "catalogId": "240236931814",
+                    "connectionProperties": {
+                        "JDBC_CONNECTION_URL": "jdbc:mysql://whsmith.c36k3kl10p4v.eu-west-1.rds.amazonaws.com:3306/db_whsmith",
+                        "JDBC_ENFORCE_SSL": "true",
+                        "PASSWORD": {
+                            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                            "ciphertext": "v1:shH6jTOcQrma+uWT:hEXVc7Wwzn3wyMyhG8a/H65aYA9E/5DsgLXclh/9bS2rtb5VNlI/hopmskMGyC280Ns="
+                        },
+                        "USERNAME": "glue.amazonaws.com"
+                    },
+                    "connectionType": "JDBC",
+                    "description": "Provisioned by SARI -- DO NOT EDIT",
+                    "id": "240236931814:sari.whsmith",
+                    "matchCriterias": [],
+                    "name": "sari.whsmith",
+                    "physicalConnectionRequirements": {
+                        "availabilityZone": "eu-west-1b",
+                        "securityGroupIdLists": [
+                            "sg-07bd217267e4dedde"
+                        ],
+                        "subnetId": "subnet-0ba5a26d5a5c2378c"
+                    }
+                },
+                "parent": "urn:pulumi:sari-test::sari::pulumi:pulumi:Stack::sari-sari-test",
+                "dependencies": [
+                    "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/whsmith"
+                ],
+                "provider": "urn:pulumi:sari-test::sari::pulumi:providers:aws::default::ec7b5b09-28e9-49b8-b8f7-bfef6039437f",
+                "propertyDependencies": {
+                    "connectionProperties": [
+                        "urn:pulumi:sari-test::sari::random:index/randomPassword:RandomPassword::glue/whsmith"
+                    ],
+                    "connectionType": null,
+                    "description": null,
+                    "name": null,
+                    "physicalConnectionRequirements": null
+                }
+            }
+        ]
+    }
+}

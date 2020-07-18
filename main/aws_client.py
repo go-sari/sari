@@ -1,6 +1,6 @@
 from datetime import datetime
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 import boto3
 from botocore.client import BaseClient
@@ -8,9 +8,15 @@ from configobj import ConfigObj
 
 
 class AwsClient:
+    _rds_known_endpoints: Set[str] = set()
+
     def __init__(self, aws_region: str = None):
         self._session = boto3.session.Session(region_name=aws_region)
         self._clients = {}
+
+    @classmethod
+    def get_rds_known_endpoints(cls):
+        return cls._rds_known_endpoints
 
     @property
     def region(self):
@@ -29,6 +35,11 @@ class AwsClient:
         databases = []
         for page in paginator.paginate(PaginationConfig={"MaxItems": 1000}):
             databases.extend(db for db in page["DBInstances"] if db["Engine"] == engine_type)
+        try:
+            for db in databases:
+                self._rds_known_endpoints.add(f"{db['Endpoint']['Address']}:{db['Endpoint']['Port']}")
+        except KeyError:
+            pass
         return databases
 
     def ssm_get_encrypted_parameter(self, name) -> Tuple[str, datetime]:

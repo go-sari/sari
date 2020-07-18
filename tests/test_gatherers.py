@@ -4,14 +4,12 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
-from pprint import pformat
 from typing import List, Tuple
 from urllib.parse import unquote
 
 import boto3
 import pytest
 import pytz
-from dictdiffer import diff
 from httmock import HTTMock, response, urlmatch
 from moto import mock_rds2, mock_ssm, mock_sts, mock_ec2
 from moto.ec2.utils import random_security_group_id
@@ -25,7 +23,7 @@ from main.gatherer.config import DatabaseConfigGatherer, UserConfigGatherer, Ser
 from main.gatherer.dbinfo import DatabaseInfoGatherer
 from main.gatherer.okta import OktaGatherer
 from main.gatherer.pwd_resolver import MasterPasswordResolver
-from main.util import dict_deep_merge
+from main.util import dict_deep_merge, assert_dict_equals
 
 AWS_REGION_US = "us-east-1"
 AWS_REGION_UK = "eu-west-2"
@@ -130,13 +128,6 @@ MASTER_PASSWORD_DEFAULTS = {
 }
 
 OKTA_API_TOKEN = "000AmAPPcvEZ8qvjY3vwh7CS6__JrRNatR3XuvaCZx"
-
-
-def assert_dict_equals(actual: dict, expected: dict):
-    differences = list(diff(actual, expected))
-    if differences:
-        # To avoid truncation of AssertionError message
-        assert False, "Dict diff:\n{}".format(pformat(differences))
 
 
 def initial_model() -> Prodict:

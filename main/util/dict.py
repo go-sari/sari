@@ -1,3 +1,15 @@
+from pprint import pformat
+
+from dictdiffer import diff
+
+
+def assert_dict_equals(actual: dict, expected: dict):
+    differences = list(diff(actual, expected))
+    if differences:
+        # To avoid truncation of AssertionError message
+        raise AssertionError("Dict diff:\n{}".format(pformat(differences)))
+
+
 def dict_deep_merge(a, b, path=None):
     """merges dictionary b into a recursively"""
     if path is None:

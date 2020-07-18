@@ -3,6 +3,9 @@
 
 set -eux
 
+MODEL_JSON=model.json
+trap "rm -f $MODEL_JSON" EXIT
+
 PULUMI_ACTION="$@"
 
 if [ -n "${PULUMI_BACKEND_URL:-}" ]; then
@@ -12,4 +15,7 @@ else
 fi
 
 pulumi --non-interactive stack select $PULUMI_STACK_NAME --create
+
+./build-model.py --model=$MODEL_JSON --purge-pulumi-stack
+
 pulumi --non-interactive --logtostderr -v=${PULUMI_LOG_LEVEL:-2} ${PULUMI_ACTION:-preview}
