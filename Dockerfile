@@ -1,4 +1,4 @@
-FROM python:3.8.4-slim-buster as stage0
+FROM python:3.8.5-slim-buster as stage0
 
 RUN set -uex; \
     apt-get update -yqq; \
