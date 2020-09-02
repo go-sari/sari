@@ -16,6 +16,7 @@ testcontainers = {extras = ["mysql"], version = "*"}
 
 [packages]
 boto3 = "~=1.12"
+bson = "~=0.5"
 configobj = "~=5.0"
 dictdiffer = "~=0.8"
 idna = "==2.8"

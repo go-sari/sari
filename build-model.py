@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from subprocess import Popen, PIPE
 
+import bson
 from loguru import logger
 
 from main.aws_client import AwsClient
@@ -30,10 +31,10 @@ def main():
     model, issues = ModelBuilder().build()
     log_issues(issues)
 
-    model_json = json.dumps(model)
+    model_json = bson.dumps(model)
     # TODO: avoid persisting passwords in plain.
     #  How: assuming only SSM-stored passwords are supported, postpone dereferencing them to the next stage.
-    Path(args.model).write_text(model_json)
+    Path(args.model).write_bytes(model_json)
 
     if args.purge_pulumi_stack:
         do_purge_pulumi_stack()
