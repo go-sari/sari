@@ -18,7 +18,7 @@ def purge_pulumi_stack(original_stack: dict, live_rds_endpoints: Set[str]) -> Tu
     stack = copy.deepcopy(original_stack)
     zombie_providers = set()
     live_resources = []
-    resources = stack["deployment"]["resources"]
+    resources = stack["deployment"].get("resources", [])
     for res in resources:
         if is_zombie_provider(res):
             provider_canonical_reference = f"{res['urn']}::{res['id']}"
