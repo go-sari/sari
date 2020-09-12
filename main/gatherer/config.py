@@ -36,7 +36,7 @@ class UserConfigGatherer(Gatherer):
         self._next_transition = model.job.next_transition
         issues = []
         with _open(self.cfg_stream) as stream:
-            users_list: List[dict] = yaml.safe_load(stream)
+            users_list: List[dict] = yaml.safe_load(stream) or []
         default_db_name = {db_uid: db.db_name for db_uid, db in model.aws.databases.items()
                            if DbStatus[db.status] >= DbStatus.ENABLED}
         enabled_databases = list(default_db_name.keys())

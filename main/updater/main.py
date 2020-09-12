@@ -66,20 +66,21 @@ class Updater:
 
     def update_iam(self):
         aws = self.model.aws
-        policy = iam.Policy("sari",
-                            name="SARIPolicy",
-                            description=MANAGED_BY_SARI_NOTICE,
-                            policy=_aws_make_policy([{
-                                "Effect": "Allow",
-                                "Action": "rds-db:connect",
-                                "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}",
-                                "Condition": {
-                                    "StringEquals": {"aws:PrincipalTag/User": login}
-                                },
-                            } for login, user in self.model.okta.users.items()
-                                if user.status == "ACTIVE" and user.permissions]
-                            ))
-        iam.RolePolicyAttachment("sari", role=SARI_ROLE_NAME, policy_arn=policy.arn)
+        if self.model.okta.users:
+            policy = iam.Policy("sari",
+                                name="SARIPolicy",
+                                description=MANAGED_BY_SARI_NOTICE,
+                                policy=_aws_make_policy([{
+                                    "Effect": "Allow",
+                                    "Action": "rds-db:connect",
+                                    "Resource": f"arn:aws:rds-db:*:{aws.account}:dbuser:*/{login}",
+                                    "Condition": {
+                                        "StringEquals": {"aws:PrincipalTag/User": login}
+                                    },
+                                } for login, user in self.model.okta.users.items()
+                                    if user.status == "ACTIVE" and user.permissions]
+                                ))
+            iam.RolePolicyAttachment("sari", role=SARI_ROLE_NAME, policy_arn=policy.arn)
 
     def update_mysql(self):
         for login, user in self.model.okta.users.items():

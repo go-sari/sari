@@ -38,7 +38,7 @@ class OktaGatherer(Gatherer):
         issues = []
         users_ext = {}
         logger.info(f"Checking Okta {okta.organization.capitalize()}'s Users:")
-        login_max_len = max(map(len, okta.users))
+        login_max_len = max(map(len, okta.users), default=0)
         for login, future in zip(okta.users, futures):
             result = future.result()
             result.raise_for_status()

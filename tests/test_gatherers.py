@@ -238,6 +238,25 @@ class TestGatherers:
             assert issues[index].id == f"{region}/{db_id}"
         assert_dict_equals(resp, {"aws": {"databases": local_databases}})
 
+    def test_cfg_gather_empty_user_config(self):
+        # Given:
+        model = initial_model()
+        model.aws["databases"] = {}
+        user_config = UserConfigGatherer("tests/data/users-empty.yaml")
+
+        # When:
+        resp, issues = user_config.gather(model)
+
+        # Then:
+        assert_dict_equals(resp, {
+            "okta": {
+                "users": {},
+            },
+            "aws": {
+                "databases": {},
+            },
+        })
+
     def test_cfg_gather_user_config(self):
         # Given:
         model = initial_model()
@@ -380,7 +399,25 @@ class TestGatherers:
 
         assert_dict_equals(resp, {"aws": SERVICES_CONFIG})
 
+    def test_okta_gather_no_users_info(self):
+        # Given:
+        model = initial_model()
+        model.okta["users"] = {}
+
+        # When:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
+            resp, issues = okta_gatherer.gather(model)
+
+        assert len(issues) == 0
+        assert_dict_equals(resp, {
+            "okta": {
+                "users": {},
+            }
+        })
+
     def test_okta_gather_user_info(self):
+        # Given:
         model = initial_model()
         model.okta.update(Prodict(users=USERS_CONFIG))
         model.okta.users["tracy.mickelsen@acme.com"] = {
@@ -410,10 +447,13 @@ class TestGatherers:
                                 "Content-Type": "application/json"
                             })
 
+        # When:
         with ThreadPoolExecutor(max_workers=1) as executor:
             okta_gatherer = OktaGatherer(OKTA_API_TOKEN, executor)
             with HTTMock(okta_user_info):
                 resp, issues = okta_gatherer.gather(model)
+
+        # Then:
         assert len(issues) == 3
         assert issues[0].level == IssueLevel.ERROR
         assert issues[0].type == "USER"
