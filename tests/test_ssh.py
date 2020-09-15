@@ -6,10 +6,10 @@ from main.updater.ssh import update_authorized_keys
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(reruns=2)
+@pytest.mark.flaky(reruns=4)
 @pytest.mark.testcontainer
 def test_update_authorized_keys():
-    with DockerContainer("quay.io/eliezio/sari-test-bh:v1.0.0").with_exposed_ports(SSH_PORT) as server:
+    with DockerContainer("quay.io/eliezio/sari-test-bh:v1.1.0").with_exposed_ports(SSH_PORT) as server:
         ssh_pub_keys = [
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEfzjdkO1LKnS/it62jmw9tH4BznlnDCBrzaKguujJ15 "
             "leroy.trent@acme.com",
