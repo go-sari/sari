@@ -56,7 +56,7 @@ class OktaGatherer(Gatherer):
                         "ssh_pubkey": ssh_pubkey,
                     }
                 else:
-                    status = "INACTIVE"
+                    status = "MISSING_SSH_PUBKEY"
                     err_msg = "Missing SSH PubKey"
             else:
                 status = "ABSENT"

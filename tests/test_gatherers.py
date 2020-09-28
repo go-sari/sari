@@ -466,7 +466,7 @@ class TestGatherers:
         assert issues[2].id == "miguel.heidler@acme.com"
         assert_dict_equals(resp, {"okta": {"users": {
             "valerie.tennant@acme.com": {
-                "status": "INACTIVE",
+                "status": "MISSING_SSH_PUBKEY",
             },
             "miguel.heidler@acme.com": {
                 "status": "DEPROVISIONED",
