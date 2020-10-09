@@ -184,6 +184,29 @@ class ServiceConfigGatherer(Gatherer):
         return Prodict(aws={"glue_connections": updates}), issues
 
 
+class ApplicationConfigGatherer(Gatherer):
+    def __init__(self, cfg_filename: str):
+        self.cfg_filename = cfg_filename
+
+    def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
+        issues = []
+        updates = {}
+        with open(self.cfg_filename) as file:
+            applications: List[dict] = yaml.safe_load(file)
+        enabled_databases = [db_uid for db_uid, db in model.aws.databases.items()
+                             if DbStatus[db.status] >= DbStatus.ENABLED]
+        for app in applications:
+            app_name = app['name']
+            db_ref = app['db']
+            db_id_list = wc_expand(db_ref, enabled_databases)
+            if not db_id_list:
+                issues.append(Issue(level=IssueLevel.ERROR, type='APP', id=app_name,
+                                    message=f"Not existing and enabled DB instance reference '{db_ref}'"))
+                continue
+            updates[app_name] = db_id_list
+        return Prodict(applications=updates), issues
+
+
 def _open(stream):
     if isinstance(stream, str):
         return open(stream, "r")

@@ -11,7 +11,7 @@ from main.aws_client import AwsClient
 from main.domain import Issue
 from main.util import dict_deep_merge
 from .aws import AwsGatherer
-from .config import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer
+from .config import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer, ApplicationConfigGatherer
 from .dbinfo import DatabaseInfoGatherer
 from .gatherer import Gatherer
 from .mysql import MySqlGatherer
@@ -69,6 +69,7 @@ def initial_model() -> Prodict:
             "admin_key_passphrase": os.environ["BH_ADMIN_KEY_PASSPHRASE"],
             "proxy_username": os.environ["BH_PROXY_USERNAME"],
         },
+        applications={},
         job={
             "next_transition": None,
         },
@@ -106,6 +107,9 @@ def get_all_gatherers(model: Prodict) -> List[Gatherer]:
     services_yaml = f"{config_dir}/services.yaml"
     if os.path.exists(services_yaml):
         gatherers.append(ServiceConfigGatherer(services_yaml))
+    applications_yaml = f"{config_dir}/applications.yaml"
+    if os.path.exists(applications_yaml):
+        gatherers.append(ApplicationConfigGatherer(applications_yaml))
     okta_gatherer = OktaGatherer(model.okta.api_token, executor)
     gatherers.append(okta_gatherer)
     return gatherers

@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 from loguru import logger
 from paramiko import SSHException
@@ -15,6 +15,7 @@ import pulumi_aws
 import pulumi_aws.cloudwatch as cloudwatch
 import pulumi_aws.glue as glue
 import pulumi_aws.iam as iam
+import pulumi_aws.ssm as ssm
 import pulumi_mysql as mysql
 import pulumi_random as random
 from main.domain import DbStatus
@@ -26,6 +27,8 @@ MANAGED_BY_SARI_NOTICE = "Provisioned by SARI -- DO NOT EDIT"
 ANY_HOST = "%"
 
 SARI_ROLE_NAME = "SARI"
+
+DEFAULT_GRANT_TYPE = 'query'
 
 
 class Updater:
@@ -43,6 +46,7 @@ class Updater:
         self.update_iam()
         self.update_mysql()
         self.update_glue_connections()
+        self.update_applications()
         self.update_bastion_host()
 
     def update_cloudwatch(self):
@@ -163,6 +167,50 @@ class Updater:
                             physical_connection_requirements=con.physical_connection_requirements,
                             opts=pulumi.ResourceOptions(
                                 provider=aws_provider,
+                                delete_before_replace=True,
+                            ))
+
+    def update_applications(self):
+        applications: Dict[str, dict] = self.model.applications
+        databases = self.model.aws.databases
+        for app_name, db_list in applications.items():
+            for db_uid in db_list:
+                db = databases[db_uid]
+                region, db_id = db_uid.split("/")
+                aws_provider = self._get_aws_provider(region)
+                resource_basename = f"app/{app_name}/{db_uid}"
+                username = f"app:{app_name}"
+                password = random.RandomPassword(f"{resource_basename}/pass",
+                                                 length=32,
+                                                 special=False,
+                                                 opts=pulumi.ResourceOptions(additional_secret_outputs=["result"]))
+                ssm.Parameter(f"{resource_basename}/user",
+                              name=f"sari.{app_name}.{db_id}.username",
+                              type="String",
+                              value=username,
+                              opts=pulumi.ResourceOptions(provider=aws_provider))
+                ssm.Parameter(f"{resource_basename}/pass",
+                              name=f"sari.{app_name}.{db_id}.password",
+                              type="SecureString",
+                              value=password.result,
+                              opts=pulumi.ResourceOptions(provider=aws_provider))
+                mysql_provider = self._get_mysql_provider(db_uid)
+                mysql_user = mysql.User(resource_basename,
+                                        user=username,
+                                        host=ANY_HOST,
+                                        plaintext_password=password.result,
+                                        tls_option="SSL",
+                                        opts=pulumi.ResourceOptions(
+                                            provider=mysql_provider,
+                                            delete_before_replace=True,
+                                        ))
+                mysql.Grant(resource_basename,
+                            user=mysql_user.user,
+                            database=db.db_name,
+                            host=mysql_user.host,
+                            privileges=self.model.custom.grant_types[DEFAULT_GRANT_TYPE],
+                            opts=pulumi.ResourceOptions(
+                                provider=mysql_provider,
                                 delete_before_replace=True,
                             ))
 

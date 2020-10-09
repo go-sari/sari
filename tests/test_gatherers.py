@@ -19,7 +19,8 @@ from prodict import Prodict
 from main.aws_client import AwsClient
 from main.domain import IssueLevel
 from main.gatherer.aws import AwsGatherer
-from main.gatherer.config import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer
+from main.gatherer.config import DatabaseConfigGatherer, UserConfigGatherer, ServiceConfigGatherer, \
+    ApplicationConfigGatherer
 from main.gatherer.dbinfo import DatabaseInfoGatherer
 from main.gatherer.okta import OktaGatherer
 from main.gatherer.pwd_resolver import MasterPasswordResolver
@@ -139,6 +140,7 @@ def initial_model() -> Prodict:
         "okta": {
             "organization": "acme",
         },
+        "applications": {},
         "job": {
             "next_transition": None,
         },
@@ -398,6 +400,21 @@ class TestGatherers:
         assert issues[1].id == f"{AWS_REGION_UK}/foyles"
 
         assert_dict_equals(resp, {"aws": SERVICES_CONFIG})
+
+    def test_cfg_gather_applications_config(self):
+        # Given:
+        model = initial_model()
+        model.aws["databases"] = dict_deep_merge(Prodict.from_dict(RDS_CONFIG_DATABASES), RDS_INFO_DATABASES)
+        app_config = ApplicationConfigGatherer("tests/data/applications.yaml")
+
+        # When:
+        resp, issues = app_config.gather(model)
+
+        # Then:
+        assert len(issues) == 0
+        assert_dict_equals(resp, {"applications": {
+            "monitoring": ["us-east-1/borders", "eu-west-2/blackwells"]
+        }})
 
     def test_okta_gather_no_users_info(self):
         # Given:
