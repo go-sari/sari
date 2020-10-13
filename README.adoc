@@ -1,0 +1,32 @@
+== Secrets
+
+[%header,cols="1m,3,3"]
+|===
+| Name
+| Description
+| Output from `sari-global-infra1`
+
+| AWS_ACCESS_KEY_ID
+| The Access Key used to publish the docker image on ECR.
+
+Example: `ASIAZEG7KKNUPTN2FDQY`
+| `sari_AWS_ACCESS_KEY_ID`
+
+| AWS_SECRET_ACCESS_KEY
+| The corresponding Secret Access Key.
+
+Example: `7afOojuPG4EwaVC7oX6qBsFS1ih0qymEWyY+EF+4`
+| `sari_AWS_SECRET_ACCESS_KEY_encrypted` (after decryption)
+
+| AWS_DEFAULT_REGION
+| The AWS Region of the ECR registry.
+
+Example: `us-east-1`
+| `sari_AWS_DEFAULT_REGION`
+
+| ECR_REPOSITORY
+| The AWS Region of the ECR registry.
+
+Example: `240236931814.dkr.ecr.eu-west-1.amazonaws.com`
+| `sari_ECR_REPOSITORY`
+|===
