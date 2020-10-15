@@ -30,3 +30,12 @@ Example: `us-east-1`
 Example: `240236931814.dkr.ecr.eu-west-1.amazonaws.com`
 | `sari_ECR_REPOSITORY`
 |===
+
+== Preparing the development environment
+
+This project uses https://github.com/pypa/pipenv[Pipenv] to manage the Python dependencies. To start you need to
+install Pipenv first (with `pip install pipenv`, for example), then run:
+
+----
+$ PIPENV_VENV_IN_PROJECT=1 pipenv install --dev --python 3.8
+----
