@@ -1,8 +1,8 @@
-FROM python:3.8.5-slim-buster as stage0
+FROM python:3.9.2-slim-buster as stage0
 
 RUN set -uex; \
     apt-get update -yqq; \
-    apt-get upgrade -yq; \
+    DOCKER_FRONTEND=noninteractive apt-get upgrade -yq; \
     rm -rfv \
         /var/lib/apt/lists/* \
         /var/cache/debconf/* \
@@ -24,14 +24,14 @@ ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 # Optmizations that saves 175MB:
 #   1. Removed non-used language-oriented runtimes
 #   2. Stripped binaries
-# Modified folders: $HOME/.pulumi /usr/local/lib/python3.8
+# Modified folders: $HOME/.pulumi /usr/local/lib/python3.9
 COPY --chown=pulumi:pulumi Pipfile* ./
 RUN set -eux; \
     # 0 [System]
     # 0.0 Packages update
     apt-get update -yqq; \
     # 0.1 Install installers
-    apt-get install -yq --no-install-recommends binutils curl jq openssh-client; \
+    DOCKER_FRONTEND=noninteractive apt-get install -yq --no-install-recommends binutils curl jq openssh-client; \
     # 1 [Pulumi]
     # 1.1 Install Pulumi & Plugins
     pulumi_version=$(jq -r .default.pulumi.version Pipfile.lock | sed -e 's/^==//'); \
@@ -63,13 +63,12 @@ RUN set -eux; \
     # 2.2 Uninstall installers
     pip3 uninstall --disable-pip-version-check --yes pipenv virtualenv virtualenv-clone; \
     # 2.3 Remove unused
-    rm -rv $HOME/.local/lib/python3.8/site-packages/mysql-vendor; \
     find $HOME/.local -type d -name __pycache__ \
         -exec rm -rf {} \; -prune; \
-    find /usr/local/lib/python3.8 -type d -name __pycache__ \
+    find /usr/local/lib/python3.9 -type d -name __pycache__ \
         -exec rm -rf {} \; -prune; \
     # 2.4 Strip executables
-    find $HOME/.local/lib/python3.8 -name \*.so \
+    find $HOME/.local/lib/python3.9 -name \*.so \
         -exec strip --strip-unneeded --preserve-dates {} \; ; \
     # 0.2 Uninstall installers
     apt-get autoremove -yq binutils curl jq; \

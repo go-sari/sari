@@ -37,4 +37,4 @@ requests-futures = "~=1.0"
 urllib3 = "~=1.25"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"

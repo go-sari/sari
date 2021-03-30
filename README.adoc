@@ -37,5 +37,5 @@ This project uses https://github.com/pypa/pipenv[Pipenv] to manage the Python de
 install Pipenv first (with `pip install pipenv`, for example), then run:
 
 ----
-$ PIPENV_VENV_IN_PROJECT=1 pipenv install --dev --python 3.8
+$ PIPENV_VENV_IN_PROJECT=1 pipenv install --dev --python 3.9
 ----
