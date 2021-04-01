@@ -69,8 +69,8 @@ RDS_INFO_DATABASES = {
             "port": 3306,
         },
         "availability_zone": f"{AWS_REGION_US}a",
-        "vpc_security_group_ids": ["sg-93ad699f"],
-        "primary_subnet": "subnet-283fefc6",
+        "vpc_security_group_ids": ["sg-593ad699"],
+        "primary_subnet": "subnet-4283fefc",
     },
     f"{AWS_REGION_UK}/blackwells": {
         "db_name": "db_blackwells",
@@ -81,8 +81,8 @@ RDS_INFO_DATABASES = {
             "port": 3306,
         },
         "availability_zone": f"{AWS_REGION_UK}a",
-        "vpc_security_group_ids": ["sg-93ad699f"],
-        "primary_subnet": "subnet-283fefc6",
+        "vpc_security_group_ids": ["sg-593ad699"],
+        "primary_subnet": "subnet-4283fefc",
     },
     f"{AWS_REGION_UK}/whsmith": {
         "status": "ABSENT",
@@ -117,8 +117,8 @@ SERVICES_CONFIG = {
             "grant_type": "crud",
             "physical_connection_requirements": {
                 "availability_zone": f"{AWS_REGION_UK}a",
-                "security_group_id_list": ["sg-93ad699f"],
-                "subnet_id": "subnet-283fefc6",
+                "security_group_id_list": ["sg-593ad699"],
+                "subnet_id": "subnet-4283fefc",
             },
         },
     }
