@@ -120,7 +120,6 @@ class DatabaseConfigGatherer(Gatherer):
 
     # noinspection PyUnusedLocal
     def gather(self, model: Prodict) -> Tuple[Prodict, List[Issue]]:
-        # pylint: disable=W0613
         with open(self.cfg_filename) as file:
             rds_list: List[dict] = yaml.safe_load(file)
         issues = []
