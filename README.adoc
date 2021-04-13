@@ -25,9 +25,9 @@ Example: `us-east-1`
 | `sari_AWS_DEFAULT_REGION`
 
 | ECR_REPOSITORY
-| The AWS Region of the ECR registry.
+| The name of the ECR repository.
 
-Example: `240236931814.dkr.ecr.eu-west-1.amazonaws.com`
+Example: `sari`
 | `sari_ECR_REPOSITORY`
 |===
 
