@@ -13,25 +13,31 @@ FROM scratch
 LABEL maintainer="Eliezio Oliveira <eliezio@pm.me>"
 COPY --from=stage0 / /
 
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+
 ENV HOME=/app
-RUN set -eux; \
-    adduser --disabled-password --home $HOME --gecos Pulumi pulumi; \
+RUN adduser --disabled-password --home $HOME --gecos Pulumi pulumi; \
     rm -vf /var/log/lastlog
 WORKDIR $HOME
 ENV PATH=$HOME/.pulumi/bin:/usr/local/bin:/usr/bin:/bin
 
 # Install Pulumi & Plugins in one go
-# Optmizations that saves 175MB:
+# Optimizations that save 175MB:
 #   1. Removed non-used language-oriented runtimes
 #   2. Stripped binaries
 # Modified folders: $HOME/.pulumi /usr/local/lib/python3.9
 COPY --chown=pulumi:pulumi Pipfile* ./
-RUN set -eux; \
+# hadolint ignore=SC2086
+RUN \
     # 0 [System]
     # 0.0 Packages update
     apt-get update -yqq; \
     # 0.1 Install installers
-    DOCKER_FRONTEND=noninteractive apt-get install -yq --no-install-recommends binutils curl jq openssh-client; \
+    DOCKER_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
+      binutils=2.31.* \
+      curl=7.64.* \
+      jq=1.5+* \
+      openssh-client=1:7.9p1-10+deb10u2; \
     # 1 [Pulumi]
     # 1.1 Install Pulumi & Plugins
     pulumi_version=$(jq -r .default.pulumi.version Pipfile.lock | sed -e 's/^==//'); \
@@ -57,7 +63,8 @@ RUN set -eux; \
     chmod -R go=u-w $HOME; \
     # 2 [Python]
     # 2.0 Install installers
-    pip3 install --disable-pip-version-check --no-cache-dir pipenv; \
+    pip3 install --disable-pip-version-check --no-cache-dir \
+      pipenv==2020.11.15; \
     # 2.1 Install packages
     su pulumi -c "pipenv install --system"; \
     # 2.2 Uninstall installers
