@@ -80,7 +80,7 @@ RUN set -eux; \
         /var/log/dpkg.log
 
 # The default (1024) if not enough for this Pulumi project
-RUN echo "* soft nofile 4096" | tee -a /etc/security/limits.conf
+RUN echo "* soft nofile 8192" | tee -a /etc/security/limits.conf
 
 USER pulumi
 
