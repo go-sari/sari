@@ -1,36 +1,3 @@
-== Secrets
-
-[%header,cols="1m,3,3"]
-|===
-| Name
-| Description
-| Output from `sari-global-infra1`
-
-| AWS_ACCESS_KEY_ID
-| The Access Key used to publish the docker image on ECR.
-
-Example: `ASIAZEG7KKNUPTN2FDQY`
-| `sari_AWS_ACCESS_KEY_ID`
-
-| AWS_SECRET_ACCESS_KEY
-| The corresponding Secret Access Key.
-
-Example: `7afOojuPG4EwaVC7oX6qBsFS1ih0qymEWyY+EF+4`
-| `sari_AWS_SECRET_ACCESS_KEY_encrypted` (after decryption)
-
-| AWS_DEFAULT_REGION
-| The AWS Region of the ECR registry.
-
-Example: `us-east-1`
-| `sari_AWS_DEFAULT_REGION`
-
-| ECR_REPOSITORY
-| The name of the ECR repository.
-
-Example: `sari`
-| `sari_ECR_REPOSITORY`
-|===
-
 == Preparing the development environment
 
 This project uses https://github.com/pypa/pipenv[Pipenv] to manage the Python dependencies. To start you need to
