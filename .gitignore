@@ -23,3 +23,6 @@ Pulumi.*.yaml
 /resources.json
 model.json
 Attic/
+.terraform/
+terraform.tfstate*
+.terraform.lock.hcl
