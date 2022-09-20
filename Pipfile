@@ -34,7 +34,7 @@ pytz = "*"
 pyyaml = "~=5.3"
 requests = "~=2.23"
 requests-futures = "~=1.0"
-urllib3 = "~=1.25"
+urllib3 = "~=1.26"
 
 [requires]
 python_version = "3.9"
